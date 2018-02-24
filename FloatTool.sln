@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FloatTool", "FloatTool\FloatTool.vcproj", "{358128B4-655B-40B2-9DD0-6FF457BF29A8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|CHSINT SDK For WinCE 6.0 (ARMV4I) = Debug|CHSINT SDK For WinCE 6.0 (ARMV4I)
+		Release|CHSINT SDK For WinCE 6.0 (ARMV4I) = Release|CHSINT SDK For WinCE 6.0 (ARMV4I)
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{358128B4-655B-40B2-9DD0-6FF457BF29A8}.Debug|CHSINT SDK For WinCE 6.0 (ARMV4I).ActiveCfg = Debug|CHSINT SDK For WinCE 6.0 (ARMV4I)
+		{358128B4-655B-40B2-9DD0-6FF457BF29A8}.Debug|CHSINT SDK For WinCE 6.0 (ARMV4I).Build.0 = Debug|CHSINT SDK For WinCE 6.0 (ARMV4I)
+		{358128B4-655B-40B2-9DD0-6FF457BF29A8}.Debug|CHSINT SDK For WinCE 6.0 (ARMV4I).Deploy.0 = Debug|CHSINT SDK For WinCE 6.0 (ARMV4I)
+		{358128B4-655B-40B2-9DD0-6FF457BF29A8}.Release|CHSINT SDK For WinCE 6.0 (ARMV4I).ActiveCfg = Release|CHSINT SDK For WinCE 6.0 (ARMV4I)
+		{358128B4-655B-40B2-9DD0-6FF457BF29A8}.Release|CHSINT SDK For WinCE 6.0 (ARMV4I).Build.0 = Release|CHSINT SDK For WinCE 6.0 (ARMV4I)
+		{358128B4-655B-40B2-9DD0-6FF457BF29A8}.Release|CHSINT SDK For WinCE 6.0 (ARMV4I).Deploy.0 = Release|CHSINT SDK For WinCE 6.0 (ARMV4I)
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
