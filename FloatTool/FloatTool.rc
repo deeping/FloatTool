@@ -72,8 +72,8 @@ IDR_MAINFRAME           ICON                    "res\\FloatTool.ico"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,1
- PRODUCTVERSION 1,0,0,1
+ FILEVERSION 1,0,0,2
+ PRODUCTVERSION 1,0,0,2
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -90,12 +90,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "dolphin"
             VALUE "FileDescription", "用于WinCE系统的悬浮显示，可在屏幕内自由拖动，可自定义菜单选项。反馈bug邮箱:deeping@foxmail.com"
-            VALUE "FileVersion", "1.0.0.1"
+            VALUE "FileVersion", "1.0.0.2"
             VALUE "InternalName", "FloatTool.exe"
             VALUE "LegalCopyright", "(C) dolphin。保留所有权利。"
             VALUE "OriginalFilename", "FloatTool.exe"
             VALUE "ProductName", "FloatTool"
-            VALUE "ProductVersion", "1.0.0.1"
+            VALUE "ProductVersion", "1.0.0.2"
         END
     END
     BLOCK "VarFileInfo"

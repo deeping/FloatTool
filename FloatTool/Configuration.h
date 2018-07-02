@@ -20,7 +20,10 @@ public:
 	CStringArray menuItemCmdStrArray;
 	int menuItemWidth;
 	int menuItemHeight;
-	TCHAR menuBackFileName[_MAX_FNAME];
+	COLORREF menuItemColorNormal;
+	COLORREF menuItemColorSelected;
+	TCHAR menuBgFileName[_MAX_FNAME];
+	TCHAR menuIconFileName[_MAX_FNAME];
 	int xScreen;
 	int yScreen;
 };

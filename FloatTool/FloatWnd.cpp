@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "Resource.h"
 #include "FloatWnd.h"
+#include "Util.h"
 
 // CFloatWnd
 
@@ -13,6 +14,7 @@ IMPLEMENT_DYNAMIC(CFloatWnd, CWnd)
 CFloatWnd::CFloatWnd()
 {
 	TRACE(_T("CFloatWnd::CFloatWnd\n"));
+	m_pcfg = Configuration::GetInstance();
 	xScreen = ::GetSystemMetrics( SM_CXSCREEN );
 	yScreen = ::GetSystemMetrics( SM_CYSCREEN );
 	m_wndHeight = m_wndWidth = 48;
@@ -22,7 +24,7 @@ CFloatWnd::CFloatWnd()
 	CreateEx(WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
 		AfxRegisterWndClass(0),
 		_T("CFloatWnd"),
-		WS_POPUP | WS_BORDER  ,
+		WS_POPUP | WS_BORDER ,
 		rect,
 		NULL,
 		NULL,
@@ -151,15 +153,15 @@ void CFloatWnd::OnPaint()
 	CRect rect;
 	GetClientRect(rect);
 
-	//»­±³¾°
-	CBrush backBrush;
-	backBrush.CreateSolidBrush(RGB(113,129,137));
-	CBrush* pOldBrush=dc.SelectObject(&backBrush);
-	dc.FillRect(&rect,&backBrush);
-	dc.SelectObject(pOldBrush); 
-
 	//»­Í¼±ê
-	dc.DrawIcon(8,8,m_hIcon);
+	if(!Util::LoadBitmapFile(m_pcfg->menuIconFileName,dc)){
+		CBrush backBrush;
+		backBrush.CreateSolidBrush(RGB(113,129,137));
+		CBrush* pOldBrush=dc.SelectObject(&backBrush);
+		dc.FillRect(&rect,&backBrush);
+		dc.SelectObject(pOldBrush); 
+		dc.DrawIcon(8,8,m_hIcon); 
+	}
 }
 
 void CFloatWnd::DrawMoveRect(CRect &rect)

@@ -1,5 +1,6 @@
 #pragma once
 #include "MenuWnd.h"
+#include "Configuration.h"
 
 // CFloatWnd
 
@@ -25,6 +26,7 @@ protected:
 	int xScreen;
 	int yScreen;
 	CMenuWnd* pMenuWnd;
+	Configuration* m_pcfg;
 public:
 	afx_msg void OnPaint();
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);

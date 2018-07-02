@@ -78,19 +78,35 @@ void Configuration::ParseIniFile()
 		}
 	}
 
+	//提取悬浮图标
+	memset(value_buffer, 0, MAX_PATH);
+	CeGetPrivateProfileString(_T("menu"), _T("icon"), _T(""), value_buffer, t_strlen(value_buffer),mIniFileName);
+	if(wcslen(value_buffer)==0){
+		GetModuleFileName(AfxGetInstanceHandle(), menuIconFileName, _MAX_FNAME);
+		TCHAR *pos = wcsrchr (menuIconFileName,'\\');
+		if(pos!=NULL){
+			*(pos+1)=0;
+			t_strcat(menuIconFileName, _T("icon.bmp"));
+		}
+	}else{
+		wcscpy(menuIconFileName, value_buffer);
+	}
+	TRACE(_T("menuIconFileName=%s\n"), menuIconFileName);
+
+	//提取菜单背景
 	memset(value_buffer, 0, MAX_PATH);
 	CeGetPrivateProfileString(_T("menu"), _T("background"), _T(""), value_buffer, t_strlen(value_buffer),mIniFileName);
 	if(wcslen(value_buffer)==0){
-		GetModuleFileName(AfxGetInstanceHandle(), menuBackFileName, _MAX_FNAME);
-		TCHAR *pos = wcsrchr (menuBackFileName,'\\');
+		GetModuleFileName(AfxGetInstanceHandle(), menuBgFileName, _MAX_FNAME);
+		TCHAR *pos = wcsrchr (menuBgFileName,'\\');
 		if(pos!=NULL){
 			*(pos+1)=0;
-			t_strcat(menuBackFileName, _T("background.bmp"));
+			t_strcat(menuBgFileName, _T("background.bmp"));
 		}
 	}else{
-		wcscpy(menuBackFileName, value_buffer);
+		wcscpy(menuBgFileName, value_buffer);
 	}
-	TRACE(_T("menuBackFileName=%s\n"), menuBackFileName);
+	TRACE(_T("menuBgFileName=%s\n"), menuBgFileName);
 
 	//提取菜单属性配置
 	memset(value_buffer, 0, MAX_PATH);
@@ -101,11 +117,29 @@ void Configuration::ParseIniFile()
 	memset(value_buffer, 0, MAX_PATH);
 	CeGetPrivateProfileString(_T("menu"), _T("item_height"), _T("-1"), value_buffer, t_strlen(value_buffer),mIniFileName);
 	menuItemHeight = _wtoi(value_buffer);
-	TRACE(_T("m_mnItemheight=%d\n"), menuItemHeight);
+	TRACE(_T("menuItemHeight=%d\n"), menuItemHeight);
 
 	if(menuItemWidth==-1 || menuItemHeight==-1){
 		menuItemWidth = xScreen/3;
 		menuItemHeight = yScreen/10;
+	}
+
+	memset(value_buffer, 0, MAX_PATH);
+	CeGetPrivateProfileString(_T("menu"), _T("item_color_normal"), _T("0xAAAAAA"), value_buffer, t_strlen(value_buffer),mIniFileName);
+	menuItemColorNormal = _wtoi(value_buffer);
+	TRACE(_T("menuItemColorNormal=%#x\n"), menuItemColorNormal);
+
+	if(menuItemColorNormal<0 || menuItemColorNormal>0xFFFFFF){
+		menuItemColorNormal = RGB(170,170,170);
+	}
+
+	memset(value_buffer, 0, MAX_PATH);
+	CeGetPrivateProfileString(_T("menu"), _T("item_color_selected"), _T("0xFF7F00"), value_buffer, t_strlen(value_buffer),mIniFileName);
+	menuItemColorSelected = _wtoi(value_buffer);
+	TRACE(_T("menuItemColorSelected=%#x\n"), menuItemColorSelected);
+
+	if(menuItemColorNormal<0 || menuItemColorNormal>0xFFFFFF){
+		menuItemColorNormal = RGB(255,127,0);
 	}
 }
 

@@ -57,10 +57,6 @@ BOOL CFloatToolApp::InitInstance()
 	}
 
 	Configuration* pcfg = Configuration::GetInstance();
-	CFloatWnd* pWnd = new CFloatWnd;
-	m_pMainWnd = pWnd;
-	pWnd->ShowWindow(SW_SHOW);
-	pWnd->UpdateWindow();
 
 	TRACE(_T("CFloatToolApp AutoRunCmd size=%d\n"), pcfg->AutoRunCmdStrArray.GetSize());
 	TRACE(_T("CFloatToolApp AutoRunCmd count=%d\n"), pcfg->AutoRunCmdStrArray.GetCount());
@@ -79,14 +75,18 @@ BOOL CFloatToolApp::InitInstance()
 		ExecuteInfo.lpDirectory = NULL;
 		ExecuteInfo.nShow = SW_HIDE; 
 
-		BOOL bResult = ShellExecuteEx(&ExecuteInfo); 
-		if(!bResult && (int)ExecuteInfo.hInstApp <= 32){    
+		BOOL bResult = ShellExecuteEx(&ExecuteInfo);
+		if(!bResult && (int)ExecuteInfo.hInstApp <= 32){
 			TCHAR msgBuffer[MAX_PATH];
 			wsprintf(msgBuffer, _T("autorun item%d %s failed!"), i, ExecuteInfo.lpFile);
 			AfxMessageBox(msgBuffer);
-		}  
+		}
 	}
 
+	CFloatWnd* pWnd = new CFloatWnd;
+	m_pMainWnd = pWnd;
+	pWnd->ShowWindow(SW_SHOW);
+	pWnd->UpdateWindow();
 	// 由于对话框已关闭，所以将返回 FALSE 以便退出应用程序，
 	//  而不是启动应用程序的消息泵。
 	return TRUE;

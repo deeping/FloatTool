@@ -5,6 +5,7 @@
 #include "FloatTool.h"
 #include "MenuWnd.h"
 #include "Configuration.h"
+#include "IniFile.h"
 #include "Util.h"
 
 
@@ -19,8 +20,8 @@ CMenuWnd::CMenuWnd(CWnd* pParentWnd)
 	m_pcfg = Configuration::GetInstance();
 	TRACE(_T("CMenuWnd::CMenuWnd Item menuItemWidth=%d,menuItemHeight=%d,count=%d\n"), m_pcfg->menuItemHeight, m_pcfg->menuItemWidth, m_pcfg->menuItemCmdStrArray.GetCount());
 
-	m_ColorNormal = RGB(170,170,170);
-	m_ColorSelected = RGB(255,127,0);
+	m_ColorNormal = m_pcfg->menuItemColorNormal;
+	m_ColorSelected = m_pcfg->menuItemColorSelected;
 	m_ColorBackground = RGB(113,129,137);
 
 	xScreen = ::GetSystemMetrics( SM_CXSCREEN );
@@ -88,7 +89,7 @@ void CMenuWnd::OnPaint()
 	dc.SetBkMode(TRANSPARENT);
 
 	//»­±³¾°
-	if(!Util::LoadBitmapFile(m_pcfg->menuBackFileName,dc)){
+	if(!Util::LoadBitmapFile(m_pcfg->menuBgFileName,dc)){
 		CBrush backBrush;
 		backBrush.CreateSolidBrush(m_ColorBackground);
 		CBrush* pOldBrush=dc.SelectObject(&backBrush); 
@@ -162,20 +163,23 @@ void CMenuWnd::OnLButtonUp(UINT nFlags, CPoint point)
 
 	if(m_mnSelectedItem < m_pcfg->menuItemCmdStrArray.GetCount()){
 		TRACE(_T("CMenuWnd::OnLButtonUp %d/%d run %s\n"), m_mnSelectedItem, m_pcfg->menuItemCmdStrArray.GetCount(),m_pcfg->menuItemCmdStrArray.GetAt(m_mnSelectedItem));
-		ExecuteInfo.cbSize = sizeof(ExecuteInfo);
-		ExecuteInfo.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;  
-		ExecuteInfo.hwnd = NULL;
-		ExecuteInfo.lpVerb = NULL;   
-		ExecuteInfo.lpFile = m_pcfg->menuItemCmdStrArray.GetAt(m_mnSelectedItem);;
-		ExecuteInfo.lpParameters = NULL;
-		ExecuteInfo.lpDirectory = NULL;
-		ExecuteInfo.nShow = SW_HIDE; 
 
-		BOOL bResult = ShellExecuteEx(&ExecuteInfo); 
-		if(!bResult && (int)ExecuteInfo.hInstApp <= 32){    
-			TCHAR msgBuffer[MAX_PATH];
-			wsprintf(msgBuffer, _T("run item%d %s failed!"), m_mnSelectedItem, ExecuteInfo.lpFile);
-			AfxMessageBox(msgBuffer);
+		if(t_strcmp(m_pcfg->menuItemCmdStrArray.GetAt(m_mnSelectedItem), _T("null"))!=0){
+			ExecuteInfo.cbSize = sizeof(ExecuteInfo);
+			ExecuteInfo.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;  
+			ExecuteInfo.hwnd = NULL;
+			ExecuteInfo.lpVerb = NULL;   
+			ExecuteInfo.lpFile = m_pcfg->menuItemCmdStrArray.GetAt(m_mnSelectedItem);
+			ExecuteInfo.lpParameters = NULL;
+			ExecuteInfo.lpDirectory = NULL;
+			ExecuteInfo.nShow = SW_HIDE; 
+
+			BOOL bResult = ShellExecuteEx(&ExecuteInfo); 
+			if(!bResult && (int)ExecuteInfo.hInstApp <= 32){    
+				TCHAR msgBuffer[MAX_PATH];
+				wsprintf(msgBuffer, _T("run item%d %s failed!"), m_mnSelectedItem, ExecuteInfo.lpFile);
+				AfxMessageBox(msgBuffer);
+			}
 		}
 	}else{
 		TRACE(_T("CMenuWnd::OnLButtonUp selected item%d exit\n"), m_mnSelectedItem);
@@ -216,7 +220,6 @@ void CMenuWnd::UpdateSelectItem(CPoint point)
 		DrawItemFrame(m_mnSelectedItem, dc, m_ColorNormal);
 		m_mnSelectedItem = i;
 		DrawItemFrame(m_mnSelectedItem, dc, m_ColorSelected);
-
 	}
 }
 
