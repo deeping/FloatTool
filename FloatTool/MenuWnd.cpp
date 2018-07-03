@@ -24,8 +24,8 @@ CMenuWnd::CMenuWnd(CWnd* pParentWnd)
 	m_ColorSelected = m_pcfg->menuItemColorSelected;
 	m_ColorBackground = RGB(113,129,137);
 
-	xScreen = ::GetSystemMetrics( SM_CXSCREEN );
-	yScreen = ::GetSystemMetrics( SM_CYSCREEN );
+	xScreen = m_pcfg->xScreen;
+	yScreen = m_pcfg->yScreen;
 
 	CPoint point(xScreen,yScreen);
 

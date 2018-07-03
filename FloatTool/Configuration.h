@@ -23,7 +23,11 @@ public:
 	COLORREF menuItemColorNormal;
 	COLORREF menuItemColorSelected;
 	TCHAR menuBgFileName[_MAX_FNAME];
-	TCHAR menuIconFileName[_MAX_FNAME];
+	TCHAR iconFileName[_MAX_FNAME];
+	int iconWidth;
+	int iconHeight;
+	int iconPosX;
+	int iconPosY;
 	int xScreen;
 	int yScreen;
 };

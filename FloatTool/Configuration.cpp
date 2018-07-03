@@ -78,20 +78,62 @@ void Configuration::ParseIniFile()
 		}
 	}
 
-	//提取悬浮图标
+	//提取悬浮图标背景
 	memset(value_buffer, 0, MAX_PATH);
-	CeGetPrivateProfileString(_T("menu"), _T("icon"), _T(""), value_buffer, t_strlen(value_buffer),mIniFileName);
+	CeGetPrivateProfileString(_T("icon"), _T("background"), _T(""), value_buffer, t_strlen(value_buffer),mIniFileName);
 	if(wcslen(value_buffer)==0){
-		GetModuleFileName(AfxGetInstanceHandle(), menuIconFileName, _MAX_FNAME);
-		TCHAR *pos = wcsrchr (menuIconFileName,'\\');
+		GetModuleFileName(AfxGetInstanceHandle(), iconFileName, _MAX_FNAME);
+		TCHAR *pos = wcsrchr (iconFileName,'\\');
 		if(pos!=NULL){
 			*(pos+1)=0;
-			t_strcat(menuIconFileName, _T("icon.bmp"));
+			t_strcat(iconFileName, _T("icon.bmp"));
 		}
 	}else{
-		wcscpy(menuIconFileName, value_buffer);
+		wcscpy(iconFileName, value_buffer);
 	}
-	TRACE(_T("menuIconFileName=%s\n"), menuIconFileName);
+	TRACE(_T("iconFileName=%s\n"), iconFileName);
+
+	//提取悬浮图标属性配置
+	memset(value_buffer, 0, MAX_PATH);
+	CeGetPrivateProfileString(_T("icon"), _T("width"), _T("-1"), value_buffer, t_strlen(value_buffer),mIniFileName);
+	iconWidth = _wtoi(value_buffer);
+	TRACE(_T("iconWidth=%d\n"), iconWidth);
+
+	memset(value_buffer, 0, MAX_PATH);
+	CeGetPrivateProfileString(_T("icon"), _T("height"), _T("-1"), value_buffer, t_strlen(value_buffer),mIniFileName);
+	iconHeight = _wtoi(value_buffer);
+	TRACE(_T("iconHeight=%d\n"), iconHeight);
+
+	if(iconWidth<=0 || iconHeight<=0){
+		iconWidth = iconHeight = 32;
+	}
+	if(iconWidth>xScreen){
+		iconWidth = xScreen;
+	}
+	if(iconHeight>yScreen){
+		iconHeight = yScreen;
+	}
+
+	memset(value_buffer, 0, MAX_PATH);
+	CeGetPrivateProfileString(_T("icon"), _T("x"), _T("-1"), value_buffer, t_strlen(value_buffer),mIniFileName);
+	iconPosX = _wtoi(value_buffer);
+	TRACE(_T("x=%d\n"), iconPosX);
+
+	memset(value_buffer, 0, MAX_PATH);
+	CeGetPrivateProfileString(_T("icon"), _T("y"), _T("-1"), value_buffer, t_strlen(value_buffer),mIniFileName);
+	iconPosY = _wtoi(value_buffer);
+	TRACE(_T("y=%d\n"), iconPosY);
+
+	if(iconPosX<0 || iconPosY<0){
+		iconPosX = xScreen;
+		iconPosY = yScreen/3;
+	}
+	if(iconPosX>xScreen-iconWidth){
+		iconPosX = xScreen-iconWidth;
+	}
+	if(iconPosY>yScreen-iconHeight){
+		iconPosY = yScreen-iconHeight;
+	}
 
 	//提取菜单背景
 	memset(value_buffer, 0, MAX_PATH);
@@ -108,7 +150,7 @@ void Configuration::ParseIniFile()
 	}
 	TRACE(_T("menuBgFileName=%s\n"), menuBgFileName);
 
-	//提取菜单属性配置
+	//提取菜单选项属性配置
 	memset(value_buffer, 0, MAX_PATH);
 	CeGetPrivateProfileString(_T("menu"), _T("item_width"), _T("-1"), value_buffer, t_strlen(value_buffer),mIniFileName);
 	menuItemWidth = _wtoi(value_buffer);

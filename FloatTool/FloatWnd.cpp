@@ -15,12 +15,13 @@ CFloatWnd::CFloatWnd()
 {
 	TRACE(_T("CFloatWnd::CFloatWnd\n"));
 	m_pcfg = Configuration::GetInstance();
-	xScreen = ::GetSystemMetrics( SM_CXSCREEN );
-	yScreen = ::GetSystemMetrics( SM_CYSCREEN );
-	m_wndHeight = m_wndWidth = 48;
+	xScreen = m_pcfg->xScreen;
+	yScreen = m_pcfg->yScreen;
+	m_wndWidth = m_pcfg->iconWidth;
+	m_wndHeight = m_pcfg->iconHeight;
 
 	//³õÊ¼»¯ÇøÓò£¬ÆÁÄ»ÓÒ²à
-	CRect rect(xScreen-m_wndWidth, (yScreen/2)-m_wndHeight, xScreen, yScreen/2);
+	CRect rect(m_pcfg->iconPosX, m_pcfg->iconPosY, m_pcfg->iconPosX+m_wndWidth, m_pcfg->iconPosY+m_wndHeight);
 	CreateEx(WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
 		AfxRegisterWndClass(0),
 		_T("CFloatWnd"),
@@ -154,12 +155,7 @@ void CFloatWnd::OnPaint()
 	GetClientRect(rect);
 
 	//»­Í¼±ê
-	if(!Util::LoadBitmapFile(m_pcfg->menuIconFileName,dc)){
-		CBrush backBrush;
-		backBrush.CreateSolidBrush(RGB(113,129,137));
-		CBrush* pOldBrush=dc.SelectObject(&backBrush);
-		dc.FillRect(&rect,&backBrush);
-		dc.SelectObject(pOldBrush); 
+	if(!Util::LoadBitmapFile(m_pcfg->iconFileName,dc)){
 		dc.DrawIcon(8,8,m_hIcon); 
 	}
 }
