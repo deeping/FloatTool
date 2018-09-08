@@ -21,14 +21,11 @@ protected:
 	CRect m_rcMoveRect;
 	CRect m_wndOldRect;
 	CPoint m_ptDown;
-	int m_wndWidth;
-	int m_wndHeight;
-	int xScreen;
-	int yScreen;
 	CMenuWnd* pMenuWnd;
 	Configuration* m_pcfg;
 public:
 	afx_msg void OnPaint();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);

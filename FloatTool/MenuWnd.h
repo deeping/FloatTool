@@ -17,23 +17,19 @@ protected:
 
 private:
 	void DrawItemFrame(int index,CDC& dc, COLORREF crColor);
-	void UpdateSelectItem(CPoint point);
-	int m_wndWidth;
-	int m_wndHight;
+	int PointToSelectItem(CPoint point);
+	void OnReloadCfg();
+	void OnMenuItemSelected(int item);
+	void UpdateSelectedFrame(int item);
+	BOOL GetPathFromCmdParam(LPCTSTR cmd, TCHAR *path);
+	BOOL ParseAndExecCommand(LPCTSTR cmd);
 	int m_mnItemCount;
 	int m_mnSelectedItem;
-	int menuItemWidth;
-	int m_mnItemHight;
-	int xScreen;
-	int yScreen;
-	COLORREF m_ColorNormal;
-	COLORREF m_ColorSelected;
-	COLORREF m_ColorBackground;
 	Configuration* m_pcfg;
-
 
 public:
 	afx_msg void OnPaint();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnKillFocus(CWnd* pNewWnd);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);

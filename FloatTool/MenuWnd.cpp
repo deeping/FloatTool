@@ -16,37 +16,27 @@ IMPLEMENT_DYNAMIC(CMenuWnd, CWnd)
 
 CMenuWnd::CMenuWnd(CWnd* pParentWnd)
 {
-	TRACE(_T("CMenuWnd::CMenuWnd\n"));
 	m_pcfg = Configuration::GetInstance();
-	TRACE(_T("CMenuWnd::CMenuWnd Item menuItemWidth=%d,menuItemHeight=%d,count=%d\n"), m_pcfg->menuItemHeight, m_pcfg->menuItemWidth, m_pcfg->menuItemCmdStrArray.GetCount());
+	TRACE(_T("CMenuWnd::CMenuWnd Item Width=%d,Height=%d,count=%d\n"),
+		m_pcfg->menuItemHeight, m_pcfg->menuItemWidth, m_pcfg->menuItemCmdStrArray.GetCount());
 
-	m_ColorNormal = m_pcfg->menuItemColorNormal;
-	m_ColorSelected = m_pcfg->menuItemColorSelected;
-	m_ColorBackground = RGB(113,129,137);
+	int wndHight = m_pcfg->menuLayout==0?m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemHeight:m_pcfg->menuItemHeight;
+	int	wndWidth = m_pcfg->menuLayout==0?m_pcfg->menuItemWidth:m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemWidth;
+	if(wndHight<=0)wndHight = 48;
+	if(wndWidth<=0)wndWidth = 48;
 
-	xScreen = m_pcfg->xScreen;
-	yScreen = m_pcfg->yScreen;
-
-	CPoint point(xScreen,yScreen);
-
-	m_mnItemCount = m_pcfg->menuItemCmdStrArray.GetCount()+1;
-	m_mnSelectedItem = -1;
-	menuItemWidth = m_pcfg->menuItemWidth;
-	m_mnItemHight = m_pcfg->menuItemHeight;
-	m_wndHight = m_mnItemCount*m_mnItemHight;
-	m_wndWidth = menuItemWidth;
-
-	if(point.x > xScreen-m_wndWidth){
-		point.x = xScreen-m_wndWidth;
+	CPoint point(m_pcfg->xScreen,m_pcfg->yScreen);
+	if(point.x > m_pcfg->xScreen-wndWidth){
+		point.x = m_pcfg->xScreen-wndWidth;
 	}
 
-	if(point.y > yScreen-m_wndHight){
-		point.y = yScreen-m_wndHight;
+	if(point.y > m_pcfg->yScreen-wndHight){
+		point.y = m_pcfg->yScreen-wndHight;
 	}
 
-	TRACE(_T("CMenuWnd::CMenuWnd Width=%d,Hight=%d\n"), m_wndWidth, m_wndHight);
+	TRACE(_T("CMenuWnd::CMenuWnd Width=%d,Hight=%d\n"), wndWidth, wndHight);
 
-	CRect rect(point.x, point.y, point.x+m_wndWidth, point.y+m_wndHight);
+	CRect rect(point.x, point.y, point.x+wndWidth, point.y+wndHight);
 	CreateEx(WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
 		AfxRegisterWndClass(0),
 		_T("CMenuWnd"),
@@ -65,16 +55,28 @@ CMenuWnd::~CMenuWnd()
 
 BEGIN_MESSAGE_MAP(CMenuWnd, CWnd)
 	ON_WM_PAINT()
+	ON_WM_TIMER()
 	ON_WM_KILLFOCUS()
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
 	ON_WM_MOUSEMOVE()
 END_MESSAGE_MAP()
 
-
-
 // CMenuWnd 消息处理程序
 
+void CMenuWnd::OnTimer(UINT_PTR nIDEvent)
+{     
+	TRACE(_T("CMenuWnd::OnTimer\n"));
+
+	//截屏
+	TCHAR bmpFileName[MAX_PATH]={0};
+	Util::GetBmpFilePathFromTime(bmpFileName, sizeof(bmpFileName));
+	TRACE(_T("[screenshot] %s\n"), bmpFileName);
+	Util::SaveHwndToBmpFile(NULL,bmpFileName);
+
+	AfxGetMainWnd()->ShowWindow(SW_SHOW);
+	KillTimer(1);
+}
 
 void CMenuWnd::OnPaint()
 {
@@ -91,22 +93,24 @@ void CMenuWnd::OnPaint()
 	//画背景
 	if(!Util::LoadBitmapFile(m_pcfg->menuBgFileName,dc)){
 		CBrush backBrush;
-		backBrush.CreateSolidBrush(m_ColorBackground);
+		backBrush.CreateSolidBrush(RGB(113,129,137));
 		CBrush* pOldBrush=dc.SelectObject(&backBrush); 
 		dc.FillRect(&rect,&backBrush);
 		dc.SelectObject(pOldBrush); 
 	}
 
 	//画选项
-	for(int i=0;i<=m_mnItemCount;i++){
-		DrawItemFrame(i,dc,m_ColorNormal);
+	for(int i=0;i<=m_pcfg->menuItemCmdStrArray.GetCount();i++){
+		DrawItemFrame(i,dc,m_pcfg->menuItemColorNormal);
 	}
 
-	if(m_mnItemCount==1){
+	if(m_pcfg->menuItemCmdStrArray.GetCount()==0){
+		DrawItemFrame(0,dc,m_pcfg->menuItemColorNormal);
 		CFont font,*pOldFont;
+		int fontSize=m_pcfg->menuItemHeight>m_pcfg->menuItemWidth?m_pcfg->menuItemWidth:m_pcfg->menuItemHeight;
 		font.CreateFont(
-			46, // nHeight
-			46, // nWidth
+			fontSize, // nHeight
+			fontSize, // nWidth
 			0, // nEscapement
 			0, // nOrientation
 			FW_NORMAL, // nWeight
@@ -141,7 +145,9 @@ void CMenuWnd::OnKillFocus(CWnd* pNewWnd)
 void CMenuWnd::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	UpdateSelectItem(point);
+	TRACE(_T("CMenuWnd::OnLButtonDown (%d,%d)\n"),point.x, point.y);
+	int i=PointToSelectItem(point);
+	UpdateSelectedFrame(i);
 
 	CWnd::OnLButtonDown(nFlags, point);
 }
@@ -149,8 +155,8 @@ void CMenuWnd::OnLButtonDown(UINT nFlags, CPoint point)
 void CMenuWnd::OnMouseMove(UINT nFlags, CPoint point)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-
-	UpdateSelectItem(point);
+	int i=PointToSelectItem(point);
+	UpdateSelectedFrame(i);
 
 	CWnd::OnMouseMove(nFlags, point);
 }
@@ -158,32 +164,12 @@ void CMenuWnd::OnMouseMove(UINT nFlags, CPoint point)
 void CMenuWnd::OnLButtonUp(UINT nFlags, CPoint point)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	TRACE(_T("CMenuWnd::OnLButtonUp select %d\n"), m_mnSelectedItem);
-	SHELLEXECUTEINFO   ExecuteInfo;
+	TRACE(_T("CMenuWnd::OnLButtonUp select %d/%d\n"), m_mnSelectedItem, m_pcfg->menuItemCmdStrArray.GetCount());
 
-	if(m_mnSelectedItem < m_pcfg->menuItemCmdStrArray.GetCount()){
-		TRACE(_T("CMenuWnd::OnLButtonUp %d/%d run %s\n"), m_mnSelectedItem, m_pcfg->menuItemCmdStrArray.GetCount(),m_pcfg->menuItemCmdStrArray.GetAt(m_mnSelectedItem));
-
-		if(t_strcmp(m_pcfg->menuItemCmdStrArray.GetAt(m_mnSelectedItem), _T("null"))!=0){
-			ExecuteInfo.cbSize = sizeof(ExecuteInfo);
-			ExecuteInfo.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;  
-			ExecuteInfo.hwnd = NULL;
-			ExecuteInfo.lpVerb = NULL;   
-			ExecuteInfo.lpFile = m_pcfg->menuItemCmdStrArray.GetAt(m_mnSelectedItem);
-			ExecuteInfo.lpParameters = NULL;
-			ExecuteInfo.lpDirectory = NULL;
-			ExecuteInfo.nShow = SW_HIDE; 
-
-			BOOL bResult = ShellExecuteEx(&ExecuteInfo); 
-			if(!bResult && (int)ExecuteInfo.hInstApp <= 32){    
-				TCHAR msgBuffer[MAX_PATH];
-				wsprintf(msgBuffer, _T("run item%d %s failed!"), m_mnSelectedItem, ExecuteInfo.lpFile);
-				AfxMessageBox(msgBuffer);
-			}
-		}
+	if(m_mnSelectedItem < m_pcfg->menuItemCmdStrArray.GetCount()&& m_mnSelectedItem >=0){
+		OnMenuItemSelected(m_mnSelectedItem);
 	}else{
-		TRACE(_T("CMenuWnd::OnLButtonUp selected item%d exit\n"), m_mnSelectedItem);
-		AfxGetMainWnd()->SendMessage(WM_CLOSE);
+		TRACE(_T("CMenuWnd::OnLButtonUp item%d is invalid!\n"), m_mnSelectedItem);
 	}
 
 	CWnd::OnLButtonUp(nFlags, point);
@@ -191,9 +177,27 @@ void CMenuWnd::OnLButtonUp(UINT nFlags, CPoint point)
 
 void CMenuWnd::DrawItemFrame(int index,CDC& dc, COLORREF crColor)
 {
-	//TRACE(_T("CMenuWnd::DrawItemFrame item%d\n"), index);
+	if(index<0){
+		TRACE(_T("CMenuWnd::DrawItemFrame item%d,skip!\n"), index);
+		return;
+	}
+
 	int bordeWidth = 1;
-	CRect cmnItemRect(bordeWidth, m_mnItemHight*index+bordeWidth, menuItemWidth-(bordeWidth*2), m_mnItemHight*(index+1)-(bordeWidth*2));
+	POINT topLeft;
+	POINT bottomRight;
+	if(m_pcfg->menuLayout==0){
+		topLeft.x=bordeWidth;
+		topLeft.y=m_pcfg->menuItemHeight*index+bordeWidth;
+		bottomRight.x=m_pcfg->menuItemWidth-(bordeWidth*2);
+		bottomRight.y=m_pcfg->menuItemHeight*(index+1)-(bordeWidth*2);
+	}else{
+		topLeft.x=m_pcfg->menuItemWidth*index+bordeWidth;;
+		topLeft.y=bordeWidth;
+		bottomRight.x=m_pcfg->menuItemWidth*(index+1)-(bordeWidth*2);
+		bottomRight.y=m_pcfg->menuItemHeight-(bordeWidth*2);
+	}
+
+	CRect cmnItemRect(topLeft, bottomRight);
 	CBrush itemBrush;
 	itemBrush.CreateSolidBrush(crColor);
 	CBrush* pOldBrush=dc.SelectObject(&itemBrush); 
@@ -203,23 +207,160 @@ void CMenuWnd::DrawItemFrame(int index,CDC& dc, COLORREF crColor)
 	dc.SelectObject(pOldBrush); 
 }
 
-void CMenuWnd::UpdateSelectItem(CPoint point)
+void CMenuWnd::UpdateSelectedFrame(int item)
 {
-	CRect rect(0,0,menuItemWidth,m_mnItemHight);
-	int i;
-	for(i=0;i<=m_mnItemCount;i++){
-		rect.top = m_mnItemHight*i;
-		rect.bottom = m_mnItemHight*(i+1);
-		if(rect.PtInRect(point)){
-			break;
-		}
-	}
-
-	if(i!=m_mnSelectedItem){
+	if(item!=m_mnSelectedItem){
 		CClientDC dc(this);
-		DrawItemFrame(m_mnSelectedItem, dc, m_ColorNormal);
-		m_mnSelectedItem = i;
-		DrawItemFrame(m_mnSelectedItem, dc, m_ColorSelected);
+		DrawItemFrame(m_mnSelectedItem, dc, m_pcfg->menuItemColorNormal);
+		m_mnSelectedItem = item;
+		DrawItemFrame(m_mnSelectedItem, dc, m_pcfg->menuItemColorSelected);
 	}
 }
 
+int CMenuWnd::PointToSelectItem(CPoint point)
+{
+	CRect rect(0,0,m_pcfg->menuItemWidth,m_pcfg->menuItemHeight);
+	//TRACE(_T("CMenuWnd::PointToSelectItem (%d,%d)\n"),point.x, point.y);
+
+	for(int i=0;i<m_pcfg->menuItemCmdStrArray.GetCount();i++){
+		if(m_pcfg->menuLayout==0){
+			rect.left=0;
+			rect.top = m_pcfg->menuItemHeight*i;
+			rect.right=m_pcfg->menuItemWidth;
+			rect.bottom = m_pcfg->menuItemHeight*(i+1);
+		}else{
+			rect.left=m_pcfg->menuItemWidth*i;
+			rect.top = 0;
+			rect.right=m_pcfg->menuItemWidth*(i+1);
+			rect.bottom = m_pcfg->menuItemHeight;
+		}
+
+		if(rect.PtInRect(point)){
+			return i;
+			break;
+		}
+	}
+	return -1;
+}
+
+void CMenuWnd::OnMenuItemSelected(int item)
+{
+	TCHAR cmd[MAX_PATH]={0};
+	TCHAR *pos = NULL;
+	int count=0;
+
+	t_strcpy(cmd, m_pcfg->menuItemCmdStrArray.GetAt(item));
+	while(1){
+		pos=t_strchr(cmd,_T('|'));
+		if(pos==NULL){
+			if(!ParseAndExecCommand(cmd)){
+				TRACE(_T("run item%d cmd%d '%s' failed!\n"), item, count, cmd);
+				TCHAR msgBuffer[MAX_PATH];
+				wsprintf(msgBuffer, _T("run item%d cmd%d '%s' failed!"), item, count, cmd);
+				AfxMessageBox(msgBuffer);
+			}else{
+				TRACE(_T("run item%d cmd%d '%s' succeed!\n"), item, count, cmd);
+			}
+			break;
+		}
+		*pos=0;
+		count++;
+
+		if(!ParseAndExecCommand(cmd)){
+			TRACE(_T("run item%d cmd%d '%s' failed!\n"), item, count, cmd);
+			TCHAR msgBuffer[MAX_PATH];
+			wsprintf(msgBuffer, _T("run item%d cmd%d '%s' failed!"), item, count, cmd);
+			AfxMessageBox(msgBuffer);
+		}else{
+			TRACE(_T("run item%d cmd%d '%s' succeed!\n"), item, count, cmd);
+		}
+
+		pos++;
+		t_strncpy(cmd, pos, t_strlen(pos)+1);
+	}
+}
+
+void CMenuWnd::OnReloadCfg()
+{
+	int wndHight = m_pcfg->menuLayout==0?m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemHeight:m_pcfg->menuItemHeight;
+	int	wndWidth = m_pcfg->menuLayout==0?m_pcfg->menuItemWidth:m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemWidth;
+
+	CRect rect;
+	GetClientRect(rect);
+	ShowWindow(SW_HIDE);
+	MoveWindow(rect.left,rect.top,wndWidth,wndHight,false);
+
+	AfxGetMainWnd()->GetClientRect(&rect);
+	AfxGetMainWnd()->MoveWindow(m_pcfg->iconPosX,m_pcfg->iconPosY,m_pcfg->iconWidth,m_pcfg->iconHeight,true);
+}
+
+BOOL CMenuWnd::GetPathFromCmdParam(LPCTSTR cmd, TCHAR *path)
+{
+	t_strcpy(path, cmd);
+	TCHAR *pos=path;
+
+	while(*pos!='\\'&&*pos!=0){pos++;}
+	if(*pos=='\\'){
+		t_strncpy(path, pos, t_strlen(pos)+1);
+		while(*pos!='>'&&*pos!=0){pos++;}
+		if(*pos=='>'){*pos=0;}
+	}else{
+		return false;
+	}
+	return true;
+}
+
+BOOL CMenuWnd::ParseAndExecCommand(LPCTSTR cmd)
+{
+	ASSERT(NULL != cmd);
+	int count=0;
+
+	TRACE(_T("CMenuWnd::ParseAndExecCommand:'%s'\n"), cmd);
+
+	if(t_stricmp(cmd, _T("<null>"))==0){
+		TRACE(_T("cmd is '%s' do nothing!\n"), cmd);
+	}else if(t_stricmp(cmd, _T("<exit>"))==0){
+		AfxGetMainWnd()->SendMessage(WM_CLOSE);
+	}else if(t_stricmp(cmd, _T("<taskbar>"))==0){
+		Util::HideOrShowTaskBar();
+	}else if(t_stricmp(cmd, _T("<hide>"))==0){
+		ShowWindow(SW_HIDE);
+	}else if(t_stricmp(cmd, _T("<show>"))==0){
+		ShowWindow(SW_SHOW);
+	}else if(wcsstr(cmd, _T("<sleep"))!=NULL){
+		int sleepMs=0;
+		count = swscanf_s(cmd, _T("<sleep%*[^0-9]%d>"),&sleepMs);
+		TRACE(_T("count=%d\n"), count);
+		if(count==1){
+			TRACE(_T("sleep %dms\n"), sleepMs);
+			Sleep(sleepMs);
+			return true;
+		}else{
+			return false;
+		}
+	}else if(wcsstr(cmd, _T("<reload"))!=NULL){
+		TCHAR fileName[MAX_PATH]={0};
+		if(GetPathFromCmdParam(cmd, fileName)){
+			TRACE(_T("fileName=%s len=%d\n"), fileName, t_strlen(fileName));
+			if(GetFileAttributes(fileName)==0xFFFFFFFF){
+				return false;
+			}else{
+				m_pcfg->reLoadConfig(fileName);
+			}
+		}else{
+			m_pcfg->reLoadConfig(NULL);
+		}
+		OnReloadCfg();
+	}else if(t_stricmp(cmd, _T("<screenshot>"))==0){
+		//截屏前先隐藏当前程序窗口
+		ShowWindow(SW_HIDE);
+		AfxGetMainWnd()->ShowWindow(SW_HIDE);
+
+		//1秒后开始截图
+		SetTimer(1,1000,NULL);
+	}else if(t_stricmp(cmd, _T(""))!=0){
+		return Util::ExecuteExCommand(cmd);
+	}
+
+	return true;
+}

@@ -7,23 +7,26 @@ protected:
 	Configuration(void);
 
 private:
-	void ParseIniFile();
-	TCHAR mIniFileName[_MAX_FNAME];
+	BOOL ParseIniFile(LPCTSTR lpFileName);
+	TCHAR mIniFileName[MAX_PATH];
 	static Configuration* pInstance;
 
 public:
 	~Configuration(void);
 
 	static Configuration* GetInstance();
+	BOOL reLoadConfig(LPCTSTR lpFileName);
 
+	TCHAR modulePath[MAX_PATH];
 	CStringArray AutoRunCmdStrArray;
 	CStringArray menuItemCmdStrArray;
+	int menuLayout;
 	int menuItemWidth;
 	int menuItemHeight;
 	COLORREF menuItemColorNormal;
 	COLORREF menuItemColorSelected;
-	TCHAR menuBgFileName[_MAX_FNAME];
-	TCHAR iconFileName[_MAX_FNAME];
+	TCHAR menuBgFileName[MAX_PATH];
+	TCHAR iconFileName[MAX_PATH];
 	int iconWidth;
 	int iconHeight;
 	int iconPosX;

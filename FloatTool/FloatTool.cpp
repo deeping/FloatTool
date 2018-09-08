@@ -5,6 +5,7 @@
 #include "FloatTool.h"
 #include "FloatWnd.h"
 #include "Configuration.h"
+#include "Util.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -58,28 +59,14 @@ BOOL CFloatToolApp::InitInstance()
 
 	Configuration* pcfg = Configuration::GetInstance();
 
-	TRACE(_T("CFloatToolApp AutoRunCmd size=%d\n"), pcfg->AutoRunCmdStrArray.GetSize());
-	TRACE(_T("CFloatToolApp AutoRunCmd count=%d\n"), pcfg->AutoRunCmdStrArray.GetCount());
-
 	//执行配置中的自动运行项目
-	SHELLEXECUTEINFO   ExecuteInfo;
 	for(int i=0;i < pcfg->AutoRunCmdStrArray.GetCount();i++){
-		TRACE(_T("%d/%d auto run %s\n"), i,pcfg->AutoRunCmdStrArray.GetCount(),pcfg->AutoRunCmdStrArray.GetAt(i));
-
-		ExecuteInfo.cbSize = sizeof(ExecuteInfo);
-		ExecuteInfo.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;  
-		ExecuteInfo.hwnd = NULL;
-		ExecuteInfo.lpVerb = NULL;   
-		ExecuteInfo.lpFile = pcfg->AutoRunCmdStrArray.GetAt(i);
-		ExecuteInfo.lpParameters = NULL;
-		ExecuteInfo.lpDirectory = NULL;
-		ExecuteInfo.nShow = SW_HIDE; 
-
-		BOOL bResult = ShellExecuteEx(&ExecuteInfo);
-		if(!bResult && (int)ExecuteInfo.hInstApp <= 32){
+		if(!Util::ExecuteExCommand(pcfg->AutoRunCmdStrArray.GetAt(i))){
 			TCHAR msgBuffer[MAX_PATH];
-			wsprintf(msgBuffer, _T("autorun item%d %s failed!"), i, ExecuteInfo.lpFile);
+			wsprintf(msgBuffer, _T("autorun item%d/%d %s failed!"), i, pcfg->AutoRunCmdStrArray.GetCount(), pcfg->AutoRunCmdStrArray.GetAt(i));
 			AfxMessageBox(msgBuffer);
+		}else{
+			TRACE(_T("autorun item%d %s succeed!\n"), i,pcfg->AutoRunCmdStrArray.GetCount(),pcfg->AutoRunCmdStrArray.GetAt(i));
 		}
 	}
 

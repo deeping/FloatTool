@@ -13,15 +13,15 @@ IMPLEMENT_DYNAMIC(CFloatWnd, CWnd)
 
 CFloatWnd::CFloatWnd()
 {
+	int wndWidth;
+	int wndHeight;
 	TRACE(_T("CFloatWnd::CFloatWnd\n"));
 	m_pcfg = Configuration::GetInstance();
-	xScreen = m_pcfg->xScreen;
-	yScreen = m_pcfg->yScreen;
-	m_wndWidth = m_pcfg->iconWidth;
-	m_wndHeight = m_pcfg->iconHeight;
+	wndWidth = m_pcfg->iconWidth;
+	wndHeight = m_pcfg->iconHeight;
 
 	//初始化区域，屏幕右侧
-	CRect rect(m_pcfg->iconPosX, m_pcfg->iconPosY, m_pcfg->iconPosX+m_wndWidth, m_pcfg->iconPosY+m_wndHeight);
+	CRect rect(m_pcfg->iconPosX, m_pcfg->iconPosY, m_pcfg->iconPosX+wndWidth, m_pcfg->iconPosY+wndHeight);
 	CreateEx(WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
 		AfxRegisterWndClass(0),
 		_T("CFloatWnd"),
@@ -36,6 +36,8 @@ CFloatWnd::CFloatWnd()
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
+	//SetTimer(1,1000,NULL);
+
 	pMenuWnd = new CMenuWnd(this);
 }
 
@@ -48,12 +50,21 @@ CFloatWnd::~CFloatWnd()
 
 BEGIN_MESSAGE_MAP(CFloatWnd, CWnd)
 	ON_WM_PAINT()
+	ON_WM_TIMER()
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
 	ON_WM_MOUSEMOVE()
 END_MESSAGE_MAP()
 
 // CFloatWnd 消息处理程序
+
+void CFloatWnd::OnTimer(UINT_PTR nIDEvent)
+{     
+	TRACE(_T("CDeskTopDlg::OnTimer\n"));
+	if(!IsWindowVisible()){
+		this->ShowWindow(SW_SHOW);
+	}
+}
 
 void CFloatWnd::OnLButtonDown(UINT nFlags, CPoint point)
 {
@@ -76,12 +87,15 @@ void CFloatWnd::OnLButtonDown(UINT nFlags, CPoint point)
 void CFloatWnd::OnMouseMove(UINT nFlags, CPoint point)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	CRect rect;
+	GetClientRect(rect);
+
 	if(m_bLBtnDown){
 		//计算当前点与按下点之间的偏移
 		int xOffset = point.x - m_ptDown.x;
 		int yOffset = point.y - m_ptDown.y;
 
-		if(abs(yOffset)>5||abs(yOffset)>5){
+		if(abs(xOffset)>5||abs(yOffset)>5){
 			DrawMoveRect(m_rcMoveRect);
 
 			//重新计算区域
@@ -90,17 +104,17 @@ void CFloatWnd::OnMouseMove(UINT nFlags, CPoint point)
 			//修正区域,避免超出屏幕范围
 			if( m_rcMoveRect.left<0){
 				m_rcMoveRect.left = 0;
-				m_rcMoveRect.right = m_wndWidth;
-			}else if(m_rcMoveRect.left>xScreen-m_wndWidth){
-				m_rcMoveRect.left = xScreen-m_wndWidth;
-				m_rcMoveRect.right = xScreen;
+				m_rcMoveRect.right = rect.Width();
+			}else if(m_rcMoveRect.left > m_pcfg->xScreen-rect.Width()){
+				m_rcMoveRect.left = m_pcfg->xScreen - rect.Width();
+				m_rcMoveRect.right = m_pcfg->xScreen;
 			}
 			if(m_rcMoveRect.top<0){
 				m_rcMoveRect.top = 0;
-				m_rcMoveRect.bottom=m_wndHeight;
-			}else if(m_rcMoveRect.top>yScreen-m_wndHeight){
-				m_rcMoveRect.top = yScreen-m_wndHeight;
-				m_rcMoveRect.bottom=yScreen;
+				m_rcMoveRect.bottom=rect.Height();
+			}else if(m_rcMoveRect.top>m_pcfg->yScreen-rect.Height()){
+				m_rcMoveRect.top = m_pcfg->yScreen-rect.Height();
+				m_rcMoveRect.bottom=m_pcfg->yScreen;
 			}
 
 			DrawMoveRect(m_rcMoveRect);
@@ -115,28 +129,33 @@ void CFloatWnd::OnLButtonUp(UINT nFlags, CPoint point)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	int x = m_rcMoveRect.left, y = m_rcMoveRect.top;
-	CRect clientRect,overlapRect;
+	CRect menuRect,overlapRect;
+	CRect rect;
+	GetClientRect(rect);
 	overlapRect = m_wndOldRect&m_rcMoveRect;
-	pMenuWnd->GetClientRect(&clientRect);
+	pMenuWnd->GetClientRect(&menuRect);
 
 	ReleaseCapture();
 	if(m_bLBtnDown){
 		//与原区域没有重叠则移动窗口，否则显示菜单
-		if(overlapRect.Width()==0){
-			TRACE(_T("MoveWindow %d,%d\n"),m_rcMoveRect.left, m_rcMoveRect.top);
+		TRACE(_T("CFloatWnd::OnLButtonUp overlapRect %d,%d\n"),overlapRect.Width(), overlapRect.Height());
+		if(overlapRect.Width()<(rect.Width())||overlapRect.Height()<(rect.Height())){
+			TRACE(_T("CFloatWnd::OnLButtonUp MoveWindow %d,%d\n"),m_rcMoveRect.left, m_rcMoveRect.top);
 			MoveWindow(m_rcMoveRect);
-		}else if(clientRect.PtInRect(point)){
-			TRACE(_T("click %d,%d,show menu!\n"),point.x, point.y);
-			if(overlapRect.Width()>0){
-				//修正菜单显示位置，不能超出屏幕
-				if(x > xScreen-clientRect.Width()){
-					x = xScreen-clientRect.Width();
-				}
-				if(y >yScreen-clientRect.Height()){
-					y = yScreen-clientRect.Height();
-				}
+		}else if(point.x>=0&&point.y>=0){
+			TRACE(_T("CFloatWnd::OnLButtonUp click %d,%d,show menu!\n"),point.x, point.y);
+			//修正菜单显示位置，不能超出屏幕
+			if(x > m_pcfg->xScreen - menuRect.Width()){
+				x = m_pcfg->xScreen - menuRect.Width()-2;
 			}
+			if(y >m_pcfg->yScreen-menuRect.Height()){
+				y = m_pcfg->yScreen-menuRect.Height()-2;
+			}
+
+			//显示菜单
 			pMenuWnd->SetWindowPos(this,x, y,0,0,SWP_NOSIZE|SWP_SHOWWINDOW);
+		}else{
+			TRACE(_T("CFloatWnd::OnLButtonUp point(%d,%d)\n"),point.x, point.y);
 		}
 	}
 	m_bLBtnDown = FALSE;
@@ -156,6 +175,11 @@ void CFloatWnd::OnPaint()
 
 	//画图标
 	if(!Util::LoadBitmapFile(m_pcfg->iconFileName,dc)){
+		CBrush backBrush;
+		backBrush.CreateSolidBrush(RGB(113,129,137));
+		CBrush* pOldBrush=dc.SelectObject(&backBrush); 
+		dc.FillRect(&rect,&backBrush);
+		dc.SelectObject(pOldBrush); 
 		dc.DrawIcon(8,8,m_hIcon); 
 	}
 }
