@@ -5,6 +5,7 @@
 #include "FloatTool.h"
 #include "FloatWnd.h"
 #include "Configuration.h"
+#include "IniFile.h"
 #include "Util.h"
 
 #ifdef _DEBUG
@@ -48,21 +49,33 @@ BOOL CFloatToolApp::InitInstance()
 	SetRegistryKey(_T("应用程序向导生成的本地应用程序"));
 
 	//互斥量，只运行一个实例  
-    HANDLE m_hMutex = CreateMutex(NULL, FALSE, _T("FloatTool_App")); 
+	HANDLE m_hMutex = CreateMutex(NULL, FALSE, _T("FloatTool_App")); 
 
-    // 互斥量存在，则程序已有一个实例运行
-    if (GetLastError() == ERROR_ALREADY_EXISTS)
-    {
-        TRACE(_T("FloatTool_App already exists\n"));
+	// 互斥量存在，则程序已有一个实例运行
+	if (GetLastError() == ERROR_ALREADY_EXISTS)
+	{
+		TRACE(_T("FloatTool_App already exists\n"));
 		return FALSE;
 	}
 
 	Configuration* pcfg = Configuration::GetInstance();
 
 	//执行配置中的自动运行项目
-	for(int i=0;i < pcfg->AutoRunCmdStrArray.GetCount();i++){
-		if(!Util::ExecuteExCommand(pcfg->AutoRunCmdStrArray.GetAt(i))){
-			TCHAR msgBuffer[MAX_PATH];
+	int i=0;
+	//如果存在<reload>命令，则解析新的配置文件
+	for(i=0;i <  pcfg->AutoRunCmdStrArray.GetCount();i++){
+		if(wcsstr(pcfg->AutoRunCmdStrArray.GetAt(i), _T("<reload"))!=NULL){
+			DoReloadCommand(pcfg->AutoRunCmdStrArray.GetAt(i));
+			break;
+		}
+	}
+
+	//忽略<reload>命令
+	for(i=0;i < pcfg->AutoRunCmdStrArray.GetCount();i++){
+		if(wcsstr(pcfg->AutoRunCmdStrArray.GetAt(i), _T("<reload"))!=NULL){
+			continue;
+		}else if(!Util::ExecuteExCommand(pcfg->AutoRunCmdStrArray.GetAt(i))){
+			TCHAR msgBuffer[MAX_PATH]={0};
 			wsprintf(msgBuffer, _T("autorun item%d/%d %s failed!"), i, pcfg->AutoRunCmdStrArray.GetCount(), pcfg->AutoRunCmdStrArray.GetAt(i));
 			AfxMessageBox(msgBuffer);
 		}else{
@@ -73,8 +86,44 @@ BOOL CFloatToolApp::InitInstance()
 	CFloatWnd* pWnd = new CFloatWnd;
 	m_pMainWnd = pWnd;
 	pWnd->ShowWindow(SW_SHOW);
-	pWnd->UpdateWindow();
+	//pWnd->UpdateWindow();
 	// 由于对话框已关闭，所以将返回 FALSE 以便退出应用程序，
 	//  而不是启动应用程序的消息泵。
 	return TRUE;
+}
+
+BOOL CFloatToolApp::DoReloadCommand(LPCTSTR cmd)
+{
+	TCHAR buf[MAX_PATH]={0};
+	TCHAR *pos = buf;
+	t_strcpy(buf, cmd);
+	BOOL ret;
+
+	while(*pos!='\\'&&*pos!=0){pos++;}
+
+	if(*pos=='\\'){
+		t_strncpy(buf, pos, t_strlen(pos)+1);
+		pos=buf;
+		while(*pos!='>'&&*pos!=0){pos++;}
+		if(*pos=='>'){*pos=0;}
+
+		TRACE(_T("fileName=%s len=%d\n"), buf, t_strlen(buf));
+		if(GetFileAttributes(buf)==0xFFFFFFFF){
+			ret = false;
+		}else{
+			ret = Configuration::GetInstance()->reLoadConfig(buf);
+		}
+	}else{
+		ret = false;
+	}
+
+	if(!ret){
+		TCHAR msgBuffer[MAX_PATH]={0};
+		wsprintf(msgBuffer, _T("reload %s failed!"), buf);
+		AfxMessageBox(msgBuffer);
+	}else{
+		TRACE(_T("reload %s succeed\n"), buf);
+	}
+
+	return ret;
 }

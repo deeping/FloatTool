@@ -170,6 +170,9 @@ void CMenuWnd::OnLButtonUp(UINT nFlags, CPoint point)
 		OnMenuItemSelected(m_mnSelectedItem);
 	}else{
 		TRACE(_T("CMenuWnd::OnLButtonUp item%d is invalid!\n"), m_mnSelectedItem);
+		if(m_pcfg->menuItemCmdStrArray.GetCount()<=0){
+			AfxGetMainWnd()->SendMessage(WM_CLOSE);
+		}
 	}
 
 	CWnd::OnLButtonUp(nFlags, point);
@@ -286,12 +289,13 @@ void CMenuWnd::OnReloadCfg()
 	int	wndWidth = m_pcfg->menuLayout==0?m_pcfg->menuItemWidth:m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemWidth;
 
 	CRect rect;
-	GetClientRect(rect);
-	ShowWindow(SW_HIDE);
+	GetWindowRect(rect);
 	MoveWindow(rect.left,rect.top,wndWidth,wndHight,false);
+	RedrawWindow();
 
-	AfxGetMainWnd()->GetClientRect(&rect);
-	AfxGetMainWnd()->MoveWindow(m_pcfg->iconPosX,m_pcfg->iconPosY,m_pcfg->iconWidth,m_pcfg->iconHeight,true);
+	AfxGetMainWnd()->GetWindowRect(&rect);
+	AfxGetMainWnd()->MoveWindow(rect.left,rect.top,m_pcfg->iconWidth,m_pcfg->iconHeight,false);
+	AfxGetMainWnd()->RedrawWindow();
 }
 
 BOOL CMenuWnd::GetPathFromCmdParam(LPCTSTR cmd, TCHAR *path)

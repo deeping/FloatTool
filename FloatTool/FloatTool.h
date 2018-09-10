@@ -17,6 +17,9 @@
 
 class CFloatToolApp : public CWinApp
 {
+private:
+	BOOL DoReloadCommand(LPCTSTR cmd);
+
 public:
 	CFloatToolApp();
 	
