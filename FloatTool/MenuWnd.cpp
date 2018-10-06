@@ -5,7 +5,6 @@
 #include "FloatTool.h"
 #include "MenuWnd.h"
 #include "Configuration.h"
-#include "IniFile.h"
 #include "Util.h"
 
 
@@ -252,9 +251,9 @@ void CMenuWnd::OnMenuItemSelected(int item)
 	TCHAR *pos = NULL;
 	int count=0;
 
-	t_strcpy(cmd, m_pcfg->menuItemCmdStrArray.GetAt(item));
+	wcscpy_s(cmd, sizeof(cmd), m_pcfg->menuItemCmdStrArray.GetAt(item));
 	while(1){
-		pos=t_strchr(cmd,_T('|'));
+		pos=wcschr(cmd,_T('|'));
 		if(pos==NULL){
 			if(!ParseAndExecCommand(cmd)){
 				TRACE(_T("run item%d cmd%d '%s' failed!\n"), item, count, cmd);
@@ -279,7 +278,7 @@ void CMenuWnd::OnMenuItemSelected(int item)
 		}
 
 		pos++;
-		t_strncpy(cmd, pos, t_strlen(pos)+1);
+		wcsncpy_s(cmd, sizeof(cmd), pos, wcslen(pos)+1);
 	}
 }
 
@@ -298,22 +297,6 @@ void CMenuWnd::OnReloadCfg()
 	AfxGetMainWnd()->RedrawWindow();
 }
 
-BOOL CMenuWnd::GetPathFromCmdParam(LPCTSTR cmd, TCHAR *path)
-{
-	t_strcpy(path, cmd);
-	TCHAR *pos=path;
-
-	while(*pos!='\\'&&*pos!=0){pos++;}
-	if(*pos=='\\'){
-		t_strncpy(path, pos, t_strlen(pos)+1);
-		while(*pos!='>'&&*pos!=0){pos++;}
-		if(*pos=='>'){*pos=0;}
-	}else{
-		return false;
-	}
-	return true;
-}
-
 BOOL CMenuWnd::ParseAndExecCommand(LPCTSTR cmd)
 {
 	ASSERT(NULL != cmd);
@@ -321,15 +304,15 @@ BOOL CMenuWnd::ParseAndExecCommand(LPCTSTR cmd)
 
 	TRACE(_T("CMenuWnd::ParseAndExecCommand:'%s'\n"), cmd);
 
-	if(t_stricmp(cmd, _T("<null>"))==0){
+	if(_wcsicmp(cmd, _T("<null>"))==0){
 		TRACE(_T("cmd is '%s' do nothing!\n"), cmd);
-	}else if(t_stricmp(cmd, _T("<exit>"))==0){
+	}else if(_wcsicmp(cmd, _T("<exit>"))==0){
 		AfxGetMainWnd()->SendMessage(WM_CLOSE);
-	}else if(t_stricmp(cmd, _T("<taskbar>"))==0){
+	}else if(_wcsicmp(cmd, _T("<taskbar>"))==0){
 		Util::HideOrShowTaskBar();
-	}else if(t_stricmp(cmd, _T("<hide>"))==0){
+	}else if(_wcsicmp(cmd, _T("<hide>"))==0){
 		ShowWindow(SW_HIDE);
-	}else if(t_stricmp(cmd, _T("<show>"))==0){
+	}else if(_wcsicmp(cmd, _T("<show>"))==0){
 		ShowWindow(SW_SHOW);
 	}else if(wcsstr(cmd, _T("<sleep"))!=NULL){
 		int sleepMs=0;
@@ -343,26 +326,18 @@ BOOL CMenuWnd::ParseAndExecCommand(LPCTSTR cmd)
 			return false;
 		}
 	}else if(wcsstr(cmd, _T("<reload"))!=NULL){
-		TCHAR fileName[MAX_PATH]={0};
-		if(GetPathFromCmdParam(cmd, fileName)){
-			TRACE(_T("fileName=%s len=%d\n"), fileName, t_strlen(fileName));
-			if(GetFileAttributes(fileName)==0xFFFFFFFF){
-				return false;
-			}else{
-				m_pcfg->reLoadConfig(fileName);
-			}
-		}else{
-			m_pcfg->reLoadConfig(NULL);
+		if(!Util::DoReloadCommand(cmd)){
+			return false;
 		}
 		OnReloadCfg();
-	}else if(t_stricmp(cmd, _T("<screenshot>"))==0){
+	}else if(_wcsicmp(cmd, _T("<screenshot>"))==0){
 		//截屏前先隐藏当前程序窗口
 		ShowWindow(SW_HIDE);
 		AfxGetMainWnd()->ShowWindow(SW_HIDE);
 
 		//1秒后开始截图
 		SetTimer(1,1000,NULL);
-	}else if(t_stricmp(cmd, _T(""))!=0){
+	}else if(_wcsicmp(cmd, _T(""))!=0){
 		return Util::ExecuteExCommand(cmd);
 	}
 

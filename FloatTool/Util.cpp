@@ -1,23 +1,86 @@
 #include "StdAfx.h"
 #include "Util.h"
-#include "IniFile.h"
+#include "Configuration.h"
+
+//////////////////////////////////////////////////////////////////////////
+/*
+函数: RelativeToAbsolutePath
+参数: rel为相对路径
+abs为绝对路径
+功能: 相对路径转绝对路径
+*/
+//////////////////////////////////////////////////////////////////////////
+DWORD Util::RelativeToAbsolutePath(LPCTSTR rel, LPTSTR abs, int len)
+{
+	ASSERT(NULL != abs);
+
+	DWORD ret = 0;
+	int relCount = 0;
+	int parentDirCount = 0;
+	TCHAR *pos = (TCHAR *)rel;
+	TCHAR *pos1;
+	TCHAR path[MAX_PATH]={0};
+	GetModulePath(path,sizeof(path));
+
+	pos=(TCHAR *)rel;
+	while(*pos!='\\'&&*pos!=0){pos++;}
+	if(*pos=='\\'){
+		if(*(pos-1)=='.' && *(pos-2)!='.'){//当前目录'./'
+			wcscat_s(path, sizeof(path), pos+1);
+		}else if(*(pos-1)=='.' && *(pos-2)=='.'){//上一级目录'../'
+			wcscat_s(path, sizeof(path), pos-2);
+		}else{//绝对路径
+			if(abs!=rel){
+				wcscpy_s(abs, len, rel);
+				return ret;
+			}
+		}
+	}
+
+	while(1){
+		pos=(TCHAR *)path;
+		pos=wcsstr(pos, _T("..\\"));
+		if(pos!=NULL){
+			pos1=pos-1;
+			if(pos1!=path){
+				while(*--pos1!='\\'){}
+				wcsncpy(pos1+1,pos+3,wcslen(pos+3)+1);
+			}else{
+				TRACE(_T("path='%s'is not reachable\n"), path);
+				ret =-1;
+				break;
+			}
+		}else{
+			break;
+		}
+	}
+
+	wcscpy_s(abs, len, path);
+	TRACE(_T("rel='%s'--->abs='%s'\n"), rel, abs);
+
+	return ret;
+}
 
 //////////////////////////////////////////////////////////////////////////
 /*
 函数: HideOrShowTaskBar
 参数: szFIleName为bmp文件路径
 dc为加载bmp图片的DC
-功能: 显示或者隐藏任务栏
+功能: 加载bmp图片
 */
 //////////////////////////////////////////////////////////////////////////
 bool Util::LoadBitmapFile(LPCTSTR szFIleName,CDC& dc)
 {
+	ASSERT(NULL != szFIleName);
+	TCHAR fileName[MAX_PATH]={0};
+	RelativeToAbsolutePath(szFIleName, fileName, sizeof(fileName));
+
 	CDC memdc;
 	memdc.CreateCompatibleDC(&dc);
 	CBitmap   bmBkgnd, *pOldBitmap = NULL;
 	HBITMAP   bitmap=NULL;
 	bmBkgnd.Detach();
-	bitmap = (HBITMAP)::SHLoadDIBitmap(szFIleName);
+	bitmap = (HBITMAP)::SHLoadDIBitmap(fileName);
 	if(bitmap!=NULL)
 	{
 		bmBkgnd.Attach(bitmap);
@@ -33,6 +96,36 @@ bool Util::LoadBitmapFile(LPCTSTR szFIleName,CDC& dc)
 
 //////////////////////////////////////////////////////////////////////////
 /*
+函数: DoReloadCommand
+参数: cmd为<reload>命令及参数
+功能: 重新加载配置文件
+*/
+//////////////////////////////////////////////////////////////////////////
+BOOL Util::DoReloadCommand(LPCTSTR cmd)
+{
+	TCHAR fileName[MAX_PATH]={0};
+	TCHAR *pos = (TCHAR *)cmd;
+
+	pos=(TCHAR *)wcsstr(cmd, _T("<reload"));
+	if(pos!=NULL){
+		wcsncpy_s(fileName,sizeof(fileName), pos+7, wcslen(pos)+1);
+		pos=fileName;
+		while(*pos!='>'&&*pos!=0){pos++;}
+		if(*pos=='>'){*pos=0;}
+
+		RelativeToAbsolutePath(fileName, fileName, sizeof(fileName));
+
+		TRACE(_T("fileName='%s' len=%d attr=%#x\n"), fileName, wcslen(fileName), GetFileAttributes(fileName));
+		if(GetFileAttributes(fileName)!=INVALID_FILE_SIZE){
+			return Configuration::GetInstance()->reLoadConfig(fileName);
+		}
+	}
+
+	return false;
+}
+
+//////////////////////////////////////////////////////////////////////////
+/*
 函数: ExecuteExCommand
 功能: 执行可执行文件，并返回执行结果
 返回: true成功,false失败
@@ -42,12 +135,15 @@ BOOL Util::ExecuteExCommand(LPCTSTR lpFile)
 {
 	ASSERT(NULL != lpFile);
 
+	TCHAR fileName[MAX_PATH]={0};
+	RelativeToAbsolutePath(lpFile, fileName, sizeof(fileName));
+
 	SHELLEXECUTEINFO   ExecuteInfo;
 	ExecuteInfo.cbSize = sizeof(ExecuteInfo);
 	ExecuteInfo.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
 	ExecuteInfo.hwnd = NULL;
 	ExecuteInfo.lpVerb = NULL;   
-	ExecuteInfo.lpFile = lpFile;
+	ExecuteInfo.lpFile = fileName;
 	ExecuteInfo.lpParameters = NULL;
 	ExecuteInfo.lpDirectory = NULL;
 	ExecuteInfo.nShow = SW_HIDE; 
@@ -73,7 +169,7 @@ void Util::HideOrShowTaskBar()
 			ShowWindow(hwndTaskBar,SW_HIDE);
 		}else{
 			ShowWindow(hwndTaskBar,SW_SHOW);
-			
+
 		}
 	}else{
 		TRACE(_T("can't FindWindow taskBar\n"));
@@ -112,12 +208,12 @@ void Util::GetBmpFilePathFromTime(TCHAR* spFilePath, int len)
 	TCHAR strTime[MAX_PATH] = {0};
 	SYSTEMTIME nowTime;
 	GetLocalTime(&nowTime);
-	_stprintf(strTime, TEXT("%04d-%02d-%02d_%02d%02d%02d"),
+	swprintf_s(strTime, sizeof(strTime), TEXT("%04d-%02d-%02d_%02d%02d%02d"),
 		nowTime.wYear, nowTime.wMonth, nowTime.wDay, nowTime.wHour, nowTime.wMinute, nowTime.wSecond);
 
 	GetModulePath(spFilePath, len);
-	t_strcat(spFilePath, strTime);
-	t_strcat(spFilePath, _T(".bmp"));
+	wcscat_s(spFilePath, len, strTime);
+	wcscat_s(spFilePath, len, _T(".bmp"));
 }
 
 //////////////////////////////////////////////////////////////////////////
