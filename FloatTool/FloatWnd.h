@@ -22,7 +22,7 @@ protected:
 	CRect m_wndOldRect;
 	CPoint m_ptDown;
 	CMenuWnd* pMenuWnd;
-	Configuration* m_pcfg;
+	const Configuration* m_pcfg;
 public:
 	afx_msg void OnPaint();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);

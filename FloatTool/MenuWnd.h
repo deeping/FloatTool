@@ -16,6 +16,7 @@ protected:
 	HICON m_hIcon;
 
 private:
+	void GetItemRect(int index,LPRECT lpRect);
 	void DrawItemFrame(int index,CDC& dc, COLORREF crColor);
 	int PointToSelectItem(CPoint point);
 	void OnReloadCfg();
@@ -23,11 +24,14 @@ private:
 	void UpdateSelectedFrame(int item);
 	BOOL GetPathFromCmdParam(LPCTSTR cmd, TCHAR *path);
 	BOOL ParseAndExecCommand(LPCTSTR cmd);
-	int m_mnItemCount;
-	int m_mnSelectedItem;
-	Configuration* m_pcfg;
+	void BuildFontSelectConfig();
+	int m_selectedItem;
+	const Configuration* m_pcfg;
+	CStringArray m_mSysFonts;
 
 public:
+	afx_msg void OnClose();
+	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnPaint();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnKillFocus(CWnd* pNewWnd);

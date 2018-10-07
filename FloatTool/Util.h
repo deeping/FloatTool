@@ -8,7 +8,7 @@ public:
 	static BOOL DoReloadCommand(LPCTSTR cmd);
 	static BOOL ExecuteExCommand(LPCTSTR lpFile);
 	static void HideOrShowTaskBar();
-	static void GetModulePath(TCHAR* spPath, int len);
+	static void GetModuleDirectory(TCHAR* spPath, int len);
 	static void GetBmpFilePathFromTime(TCHAR* spFilePath, int len);
 	static BOOL SaveHwndToBmpFile(HWND hWnd, LPCTSTR lpszPath);
 };

@@ -309,7 +309,7 @@
 	<Globals>
 		<Global
 			Name="RESOURCE_FILE"
-			Value="toolbar.rc"
+			Value="FloatTool.rc"
 		/>
 	</Globals>
 </VisualStudioProject>

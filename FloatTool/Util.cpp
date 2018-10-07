@@ -20,7 +20,7 @@ DWORD Util::RelativeToAbsolutePath(LPCTSTR rel, LPTSTR abs, int len)
 	TCHAR *pos = (TCHAR *)rel;
 	TCHAR *pos1;
 	TCHAR path[MAX_PATH]={0};
-	GetModulePath(path,sizeof(path));
+	GetModuleDirectory(path,sizeof(path));
 
 	pos=(TCHAR *)rel;
 	while(*pos!='\\'&&*pos!=0){pos++;}
@@ -30,10 +30,8 @@ DWORD Util::RelativeToAbsolutePath(LPCTSTR rel, LPTSTR abs, int len)
 		}else if(*(pos-1)=='.' && *(pos-2)=='.'){//上一级目录'../'
 			wcscat_s(path, sizeof(path), pos-2);
 		}else{//绝对路径
-			if(abs!=rel){
-				wcscpy_s(abs, len, rel);
-				return ret;
-			}
+			wcscpy_s(abs, len, pos);
+			return ret;
 		}
 	}
 
@@ -178,12 +176,12 @@ void Util::HideOrShowTaskBar()
 
 //////////////////////////////////////////////////////////////////////////
 /*
-函数: GetModulePath
+函数: GetModuleDirectory
 功能: 获取当前程序路径
 参数: spPath为路径指针
 */
 //////////////////////////////////////////////////////////////////////////
-void Util::GetModulePath(TCHAR* spPath, int len)
+void Util::GetModuleDirectory(TCHAR* spPath, int len)
 {
 	ASSERT(NULL != spPath);
 
@@ -211,7 +209,7 @@ void Util::GetBmpFilePathFromTime(TCHAR* spFilePath, int len)
 	swprintf_s(strTime, sizeof(strTime), TEXT("%04d-%02d-%02d_%02d%02d%02d"),
 		nowTime.wYear, nowTime.wMonth, nowTime.wDay, nowTime.wHour, nowTime.wMinute, nowTime.wSecond);
 
-	GetModulePath(spFilePath, len);
+	GetModuleDirectory(spFilePath, len);
 	wcscat_s(spFilePath, len, strTime);
 	wcscat_s(spFilePath, len, _T(".bmp"));
 }

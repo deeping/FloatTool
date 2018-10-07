@@ -19,6 +19,9 @@ class CFloatToolApp : public CWinApp
 {
 private:
 	BOOL DoReloadCommand(LPCTSTR cmd);
+	void DoAutoRunCommands();
+	void AddCustomFontResource();
+	void RemoveCustomFontResource();
 
 public:
 	CFloatToolApp();
@@ -26,6 +29,7 @@ public:
 // ÷ÿ–¥
 public:
 	virtual BOOL InitInstance();
+	virtual int ExitInstance();
 
 //  µœ÷
 

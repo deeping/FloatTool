@@ -16,11 +16,9 @@ IMPLEMENT_DYNAMIC(CMenuWnd, CWnd)
 CMenuWnd::CMenuWnd(CWnd* pParentWnd)
 {
 	m_pcfg = Configuration::GetInstance();
-	TRACE(_T("CMenuWnd::CMenuWnd Item Width=%d,Height=%d,count=%d\n"),
-		m_pcfg->menuItemHeight, m_pcfg->menuItemWidth, m_pcfg->menuItemCmdStrArray.GetCount());
 
-	int wndHight = m_pcfg->menuLayout==0?m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemHeight:m_pcfg->menuItemHeight;
-	int	wndWidth = m_pcfg->menuLayout==0?m_pcfg->menuItemWidth:m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemWidth;
+	int wndHight = m_pcfg->menuLayout==LAYOUT_VERTICAL?m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemHeight:m_pcfg->menuItemHeight;
+	int	wndWidth = m_pcfg->menuLayout==LAYOUT_VERTICAL?m_pcfg->menuItemWidth:m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemWidth;
 	if(wndHight<=0)wndHight = 48;
 	if(wndWidth<=0)wndWidth = 48;
 
@@ -38,7 +36,7 @@ CMenuWnd::CMenuWnd(CWnd* pParentWnd)
 	CRect rect(point.x, point.y, point.x+wndWidth, point.y+wndHight);
 	CreateEx(WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
 		AfxRegisterWndClass(0),
-		_T("CMenuWnd"),
+		m_pcfg->windowName,
 		WS_POPUP | WS_BORDER ,
 		rect,
 		pParentWnd,
@@ -51,8 +49,28 @@ CMenuWnd::~CMenuWnd()
 	TRACE(_T("CMenuWnd::~CMenuWnd\n"));
 }
 
+INT CALLBACK EnumFontNameProc(LOGFONT *plf, TEXTMETRIC* ptm, INT nFontType, LPARAM lParam)
+{
+	TRACE(_T("fontName=%s charset=%d\n"), plf->lfFaceName, ptm->tmCharSet);
+
+	CStringArray* sysFonts = (CStringArray*) lParam;
+	if (sysFonts != NULL)
+	{
+		sysFonts->Add(CString(plf->lfFaceName));
+	}
+
+	Configuration *pcfg = Configuration::GetInstance();
+	if(wcscmp(plf->lfFaceName,pcfg->fontConfigInfo.lf.lfFaceName)==0){
+		TRACE(_T("EnumFontNameProc find font '%s',set charSet=%d\n"), plf->lfFaceName, ptm->tmCharSet);
+		pcfg->fontConfigInfo.lf.lfCharSet = ptm->tmCharSet;
+	}
+
+	return TRUE;
+}
 
 BEGIN_MESSAGE_MAP(CMenuWnd, CWnd)
+	ON_WM_CREATE()
+	ON_WM_CLOSE()
 	ON_WM_PAINT()
 	ON_WM_TIMER()
 	ON_WM_KILLFOCUS()
@@ -62,10 +80,34 @@ BEGIN_MESSAGE_MAP(CMenuWnd, CWnd)
 END_MESSAGE_MAP()
 
 // CMenuWnd 消息处理程序
+// CFloatWnd 消息处理程序
+int CMenuWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
+{
+	if (CWnd::OnCreate(lpCreateStruct) == -1)
+		return -1;
+
+	// TODO:  在此添加您专用的创建代码
+	TRACE(_T("CMenuWnd::OnCreate\n"));
+
+	//更新字体编码
+	HDC hdc = ::GetDC(*this);
+	::EnumFontFamilies(hdc, (LPTSTR) NULL, (FONTENUMPROC)EnumFontNameProc,NULL);
+	::ReleaseDC(*this, hdc);
+
+	return 0;
+}
+
+void CMenuWnd::OnClose()
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	TRACE(_T("CMenuWnd::OnClose\n"));
+
+	CWnd::OnClose();
+}
 
 void CMenuWnd::OnTimer(UINT_PTR nIDEvent)
 {     
-	TRACE(_T("CMenuWnd::OnTimer\n"));
+	TRACE(_T("CMenuWnd::OnTimer %#x\n"), nIDEvent);
 
 	//截屏
 	TCHAR bmpFileName[MAX_PATH]={0};
@@ -85,50 +127,53 @@ void CMenuWnd::OnPaint()
 	// 不为绘图消息调用 CWnd::OnPaint()
 
 	CRect rect;
-	GetClientRect(rect);
-
-	dc.SetBkMode(TRANSPARENT);
+	GetWindowRect(rect);
+	TRACE(_T("GetWindowRect %d,%d,%d,%d\n"), rect.left,rect.top, rect.right, rect.bottom);
+	GetClientRect(&rect);
 
 	//画背景
 	if(!Util::LoadBitmapFile(m_pcfg->menuBgFileName,dc)){
 		CBrush backBrush;
-		backBrush.CreateSolidBrush(RGB(113,129,137));
+		backBrush.CreateSolidBrush(RGB(0,0,0));
 		CBrush* pOldBrush=dc.SelectObject(&backBrush); 
 		dc.FillRect(&rect,&backBrush);
 		dc.SelectObject(pOldBrush); 
 	}
 
 	//画选项
-	for(int i=0;i<=m_pcfg->menuItemCmdStrArray.GetCount();i++){
-		DrawItemFrame(i,dc,m_pcfg->menuItemColorNormal);
+	HFONT hfont = CreateFontIndirect(&m_pcfg->fontConfigInfo.lf);
+	HFONT oldfont = (HFONT)SelectObject(dc,hfont);
+	COLORREF oldTextColor = dc.SetTextColor(m_pcfg->fontConfigInfo.fontColor);
+	int oldBkMode = dc.SetBkMode(TRANSPARENT);
+
+	TCHAR lfFaceName[LF_FACESIZE];
+	if(GetTextFace(dc,sizeof(lfFaceName), lfFaceName)){
+		TRACE(_T("lfFaceName=%s\n"), lfFaceName);
+	}
+	TEXTMETRIC tm;
+	if(GetTextMetrics(dc,&tm)){
+		TRACE(_T("tmCharSet=%d tmHeight=%d\n"), tm.tmCharSet, tm.tmHeight);
 	}
 
 	if(m_pcfg->menuItemCmdStrArray.GetCount()==0){
 		DrawItemFrame(0,dc,m_pcfg->menuItemColorNormal);
-		CFont font,*pOldFont;
-		int fontSize=m_pcfg->menuItemHeight>m_pcfg->menuItemWidth?m_pcfg->menuItemWidth:m_pcfg->menuItemHeight;
-		font.CreateFont(
-			fontSize, // nHeight
-			fontSize, // nWidth
-			0, // nEscapement
-			0, // nOrientation
-			FW_NORMAL, // nWeight
-			FALSE, // bItalic
-			FALSE, // bUnderline
-			0, // cStrikeOut
-			ANSI_CHARSET, // nCharSet
-			OUT_DEFAULT_PRECIS, // nOutPrecision
-			CLIP_DEFAULT_PRECIS, // nClipPrecision
-			DEFAULT_QUALITY, // nQuality
-			DEFAULT_PITCH | FF_SWISS,
-			_T("Arial") // nPitchAndFamily Arial
-			); 
-		pOldFont = dc.SelectObject(&font);
-		dc.DrawTextW(_T("Exit"),&rect,DT_CENTER);
-		dc.SelectObject(pOldFont);
+		GetItemRect(0,&rect);
+		rect.DeflateRect(4,4);
+		dc.DrawTextW(_T("exit"), &rect, m_pcfg->fontConfigInfo.fontFormat);	
+	}else{
+		for(int i=0;i<m_pcfg->menuItemCmdStrArray.GetCount();i++){
+			DrawItemFrame(i,dc,m_pcfg->menuItemColorNormal);
+			GetItemRect(i,&rect);
+			rect.DeflateRect(4,4);
+			dc.DrawTextW(m_pcfg->menuItemTextStrArray.GetAt(i), &rect, m_pcfg->fontConfigInfo.fontFormat);	
+		}
 	}
+	dc.SetBkMode(oldBkMode);
+	dc.SetTextColor(oldTextColor );
+	dc.SelectObject(oldfont);
+	DeleteObject(hfont);
 
-	m_mnSelectedItem = -1;
+	m_selectedItem = -1;
 }
 
 void CMenuWnd::OnKillFocus(CWnd* pNewWnd)
@@ -144,10 +189,8 @@ void CMenuWnd::OnKillFocus(CWnd* pNewWnd)
 void CMenuWnd::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	TRACE(_T("CMenuWnd::OnLButtonDown (%d,%d)\n"),point.x, point.y);
 	int i=PointToSelectItem(point);
 	UpdateSelectedFrame(i);
-
 	CWnd::OnLButtonDown(nFlags, point);
 }
 
@@ -156,25 +199,52 @@ void CMenuWnd::OnMouseMove(UINT nFlags, CPoint point)
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	int i=PointToSelectItem(point);
 	UpdateSelectedFrame(i);
-
 	CWnd::OnMouseMove(nFlags, point);
 }
 
 void CMenuWnd::OnLButtonUp(UINT nFlags, CPoint point)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	TRACE(_T("CMenuWnd::OnLButtonUp select %d/%d\n"), m_mnSelectedItem, m_pcfg->menuItemCmdStrArray.GetCount());
+	TRACE(_T("CMenuWnd::OnLButtonUp select %d/%d\n"), m_selectedItem, m_pcfg->menuItemCmdStrArray.GetCount());
 
-	if(m_mnSelectedItem < m_pcfg->menuItemCmdStrArray.GetCount()&& m_mnSelectedItem >=0){
-		OnMenuItemSelected(m_mnSelectedItem);
+	if(m_selectedItem < m_pcfg->menuItemCmdStrArray.GetCount()&& m_selectedItem >=0){
+		OnMenuItemSelected(m_selectedItem);
 	}else{
-		TRACE(_T("CMenuWnd::OnLButtonUp item%d is invalid!\n"), m_mnSelectedItem);
+		TRACE(_T("CMenuWnd::OnLButtonUp item%d is invalid!\n"), m_selectedItem);
 		if(m_pcfg->menuItemCmdStrArray.GetCount()<=0){
 			AfxGetMainWnd()->SendMessage(WM_CLOSE);
 		}
 	}
 
 	CWnd::OnLButtonUp(nFlags, point);
+}
+
+void CMenuWnd::GetItemRect(int index,LPRECT lpRect)
+{
+	ASSERT(NULL != lpRect);
+
+	if(index<0){
+		TRACE(_T("CMenuWnd::GetItemRect item%d invalid!\n"), index);
+		return;
+	}
+
+	int left, top, right, bottom;
+
+	if(m_pcfg->menuLayout==LAYOUT_VERTICAL){
+		left=0;
+		top=m_pcfg->menuItemHeight*index;
+		right=m_pcfg->menuItemWidth;
+		bottom=m_pcfg->menuItemHeight*(index+1);
+	}else{
+		left=m_pcfg->menuItemWidth*index;
+		top=0;
+		right=m_pcfg->menuItemWidth*(index+1);
+		bottom=m_pcfg->menuItemHeight;
+	}
+	lpRect->left=left;
+	lpRect->top=top;
+	lpRect->right=right;
+	lpRect->bottom=bottom;
 }
 
 void CMenuWnd::DrawItemFrame(int index,CDC& dc, COLORREF crColor)
@@ -184,59 +254,33 @@ void CMenuWnd::DrawItemFrame(int index,CDC& dc, COLORREF crColor)
 		return;
 	}
 
-	int bordeWidth = 1;
-	POINT topLeft;
-	POINT bottomRight;
-	if(m_pcfg->menuLayout==0){
-		topLeft.x=bordeWidth;
-		topLeft.y=m_pcfg->menuItemHeight*index+bordeWidth;
-		bottomRight.x=m_pcfg->menuItemWidth-(bordeWidth*2);
-		bottomRight.y=m_pcfg->menuItemHeight*(index+1)-(bordeWidth*2);
-	}else{
-		topLeft.x=m_pcfg->menuItemWidth*index+bordeWidth;;
-		topLeft.y=bordeWidth;
-		bottomRight.x=m_pcfg->menuItemWidth*(index+1)-(bordeWidth*2);
-		bottomRight.y=m_pcfg->menuItemHeight-(bordeWidth*2);
-	}
+	CRect rect;
+	GetItemRect(index, &rect);
+	rect.DeflateRect(2,2);
 
-	CRect cmnItemRect(topLeft, bottomRight);
-	CBrush itemBrush;
-	itemBrush.CreateSolidBrush(crColor);
-	CBrush* pOldBrush=dc.SelectObject(&itemBrush); 
+	CBrush brush;
+	brush.CreateSolidBrush(crColor);
+	CBrush* pOldBrush=dc.SelectObject(&brush); 
 
-	dc.FrameRect(&cmnItemRect, &itemBrush);
-
+	dc.FrameRect(&rect, &brush);
 	dc.SelectObject(pOldBrush); 
 }
 
 void CMenuWnd::UpdateSelectedFrame(int item)
 {
-	if(item!=m_mnSelectedItem){
+	if(item!=m_selectedItem){
 		CClientDC dc(this);
-		DrawItemFrame(m_mnSelectedItem, dc, m_pcfg->menuItemColorNormal);
-		m_mnSelectedItem = item;
-		DrawItemFrame(m_mnSelectedItem, dc, m_pcfg->menuItemColorSelected);
+		DrawItemFrame(m_selectedItem, dc, m_pcfg->menuItemColorNormal);
+		m_selectedItem = item;
+		DrawItemFrame(m_selectedItem, dc, m_pcfg->menuItemColorSelected);
 	}
 }
 
 int CMenuWnd::PointToSelectItem(CPoint point)
 {
-	CRect rect(0,0,m_pcfg->menuItemWidth,m_pcfg->menuItemHeight);
-	//TRACE(_T("CMenuWnd::PointToSelectItem (%d,%d)\n"),point.x, point.y);
-
+	CRect rect;
 	for(int i=0;i<m_pcfg->menuItemCmdStrArray.GetCount();i++){
-		if(m_pcfg->menuLayout==0){
-			rect.left=0;
-			rect.top = m_pcfg->menuItemHeight*i;
-			rect.right=m_pcfg->menuItemWidth;
-			rect.bottom = m_pcfg->menuItemHeight*(i+1);
-		}else{
-			rect.left=m_pcfg->menuItemWidth*i;
-			rect.top = 0;
-			rect.right=m_pcfg->menuItemWidth*(i+1);
-			rect.bottom = m_pcfg->menuItemHeight;
-		}
-
+		GetItemRect(i, &rect);
 		if(rect.PtInRect(point)){
 			return i;
 			break;
@@ -284,16 +328,40 @@ void CMenuWnd::OnMenuItemSelected(int item)
 
 void CMenuWnd::OnReloadCfg()
 {
-	int wndHight = m_pcfg->menuLayout==0?m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemHeight:m_pcfg->menuItemHeight;
-	int	wndWidth = m_pcfg->menuLayout==0?m_pcfg->menuItemWidth:m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemWidth;
+	int wndHight = m_pcfg->menuLayout==LAYOUT_VERTICAL?m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemHeight:m_pcfg->menuItemHeight;
+	int	wndWidth = m_pcfg->menuLayout==LAYOUT_VERTICAL?m_pcfg->menuItemWidth:m_pcfg->menuItemCmdStrArray.GetCount()*m_pcfg->menuItemWidth;
 
+	//更新字体编码
+	HDC hdc = ::GetDC(*this);
+	::EnumFontFamilies(hdc, (LPTSTR) NULL, (FONTENUMPROC)EnumFontNameProc,NULL);
+	::ReleaseDC(*this, hdc);
+
+	//更新菜单位置
 	CRect rect;
 	GetWindowRect(rect);
+	if(wndWidth > m_pcfg->xScreen){
+		rect.MoveToX(0);
+	}else if(rect.left+wndWidth>m_pcfg->xScreen){
+		rect.MoveToX(m_pcfg->xScreen-wndWidth);
+	}
+	if(wndHight > m_pcfg->yScreen){
+		rect.MoveToY(0);
+	}else if(rect.top+wndHight>m_pcfg->yScreen){
+		rect.MoveToY(m_pcfg->yScreen-wndHight);
+	}
+
 	MoveWindow(rect.left,rect.top,wndWidth,wndHight,false);
 	RedrawWindow();
 
+	//更新图标位置
 	AfxGetMainWnd()->GetWindowRect(&rect);
-	AfxGetMainWnd()->MoveWindow(rect.left,rect.top,m_pcfg->iconWidth,m_pcfg->iconHeight,false);
+	if(rect.left+m_pcfg->iconConfigInfo.iconWidth>m_pcfg->xScreen){
+		rect.MoveToX(m_pcfg->xScreen-m_pcfg->iconConfigInfo.iconWidth);
+	}
+	if(rect.top+m_pcfg->iconConfigInfo.iconHeight>m_pcfg->yScreen){
+		rect.MoveToY(m_pcfg->yScreen-m_pcfg->iconConfigInfo.iconHeight);
+	}
+	AfxGetMainWnd()->MoveWindow(rect.left,rect.top,m_pcfg->iconConfigInfo.iconWidth,m_pcfg->iconConfigInfo.iconHeight,false);
 	AfxGetMainWnd()->RedrawWindow();
 }
 
@@ -326,7 +394,9 @@ BOOL CMenuWnd::ParseAndExecCommand(LPCTSTR cmd)
 			return false;
 		}
 	}else if(wcsstr(cmd, _T("<reload"))!=NULL){
-		if(!Util::DoReloadCommand(cmd)){
+		if(_wcsicmp(cmd, _T("<reload $font>"))==0){
+			BuildFontSelectConfig();
+		}else if(!Util::DoReloadCommand(cmd)){
 			return false;
 		}
 		OnReloadCfg();
@@ -337,9 +407,63 @@ BOOL CMenuWnd::ParseAndExecCommand(LPCTSTR cmd)
 
 		//1秒后开始截图
 		SetTimer(1,1000,NULL);
+	}else if(wcsstr(cmd, _T("<setfont"))!=NULL){
+		Configuration *pcfg = Configuration::GetInstance();
+		memset(pcfg->fontConfigInfo.lf.lfFaceName,0,sizeof(pcfg->fontConfigInfo.lf.lfFaceName));
+		wcsncpy_s(pcfg->fontConfigInfo.lf.lfFaceName, sizeof(pcfg->fontConfigInfo.lf.lfFaceName),cmd+9, wcslen(cmd+9)-1);
+		TRACE(_T("pcfg->fontConfigInfo.lf.lfFaceName =%s\n"), pcfg->fontConfigInfo.lf.lfFaceName);
+
+		//更新字体编码
+		HDC hdc = ::GetDC(*this);
+		::EnumFontFamilies(hdc, (LPTSTR) NULL, (FONTENUMPROC)EnumFontNameProc,NULL);
+		::ReleaseDC(*this, hdc);
+		RedrawWindow();
+		pcfg->SetLockFont(true);
 	}else if(_wcsicmp(cmd, _T(""))!=0){
 		return Util::ExecuteExCommand(cmd);
 	}
 
 	return true;
+}
+
+void CMenuWnd::BuildFontSelectConfig()
+{
+	TRACE(_T("CMenuWnd::BuildFontSelectConfig\n"));
+	TCHAR buffer[MAX_PATH]={0};
+	Configuration *pcfg = Configuration::GetInstance();
+	CStringArray *menuItemCmdStrArray = &pcfg->menuItemCmdStrArray;
+	CStringArray *menuItemTextStrArray = &pcfg->menuItemTextStrArray;
+	menuItemCmdStrArray->RemoveAll();
+	menuItemTextStrArray->RemoveAll();
+
+	//pcfg->menuItemHeight=32;
+	pcfg->fontConfigInfo.lf.lfHeight = 0;
+	wcscpy_s(pcfg->menuBgFileName, sizeof(pcfg->menuBgFileName), _T(""));
+	//添加返回
+	memset(buffer, 0, sizeof(buffer));
+	swprintf_s(buffer, sizeof(buffer), _T("<reload %s>"), pcfg->m_IniFileName);
+	menuItemCmdStrArray->Add(buffer);
+
+	memset(buffer, 0, sizeof(buffer));
+	swprintf_s(buffer, sizeof(buffer), _T("%s"), _T("<    Back"));
+	menuItemTextStrArray->Add(buffer);
+
+	//添加字体列表
+	HDC hdc = ::GetDC(*this);
+	m_mSysFonts.RemoveAll();
+
+	if (::EnumFontFamilies(hdc, (LPTSTR) NULL, (FONTENUMPROC)EnumFontNameProc,(LPARAM)&(m_mSysFonts)) != 0)
+	{
+		for (int i = 0; i< m_mSysFonts.GetCount(); i++)
+		{
+			memset(buffer, 0, sizeof(buffer));
+			swprintf_s(buffer, sizeof(buffer), _T("<setfont %s>"), m_mSysFonts.GetAt(i));
+			menuItemCmdStrArray->Add(buffer);
+
+			memset(buffer, 0, sizeof(buffer));
+			swprintf_s(buffer, sizeof(buffer), _T("%s"), m_mSysFonts.GetAt(i));
+			menuItemTextStrArray->Add(buffer);
+		}
+	}
+	::ReleaseDC(*this, hdc);
 }

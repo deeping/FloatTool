@@ -17,14 +17,14 @@ CFloatWnd::CFloatWnd()
 	int wndHeight;
 	TRACE(_T("CFloatWnd::CFloatWnd\n"));
 	m_pcfg = Configuration::GetInstance();
-	wndWidth = m_pcfg->iconWidth;
-	wndHeight = m_pcfg->iconHeight;
+	wndWidth = m_pcfg->iconConfigInfo.iconWidth;
+	wndHeight = m_pcfg->iconConfigInfo.iconHeight;
 
 	//初始化区域，屏幕右侧
-	CRect rect(m_pcfg->iconPosX, m_pcfg->iconPosY, m_pcfg->iconPosX+wndWidth, m_pcfg->iconPosY+wndHeight);
+	CRect rect(m_pcfg->iconConfigInfo.iconPosX, m_pcfg->iconConfigInfo.iconPosY, m_pcfg->iconConfigInfo.iconPosX+wndWidth, m_pcfg->iconConfigInfo.iconPosY+wndHeight);
 	CreateEx(WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
 		AfxRegisterWndClass(0),
-		_T("CFloatWnd"),
+		m_pcfg->windowName,
 		WS_POPUP | WS_BORDER ,
 		rect,
 		NULL,
@@ -145,10 +145,14 @@ void CFloatWnd::OnLButtonUp(UINT nFlags, CPoint point)
 		}else if(point.x>=0&&point.y>=0){
 			TRACE(_T("CFloatWnd::OnLButtonUp click %d,%d,show menu!\n"),point.x, point.y);
 			//修正菜单显示位置，不能超出屏幕
-			if(x > m_pcfg->xScreen - menuRect.Width()){
+			if(menuRect.Width() > m_pcfg->xScreen){
+				x = 0;
+			}else if(x > m_pcfg->xScreen - menuRect.Width()){
 				x = m_pcfg->xScreen - menuRect.Width()-2;
 			}
-			if(y >m_pcfg->yScreen-menuRect.Height()){
+			if(menuRect.Height() > m_pcfg->yScreen){
+				y = 0;
+			}else if(y >m_pcfg->yScreen-menuRect.Height()){
 				y = m_pcfg->yScreen-menuRect.Height()-2;
 			}
 
@@ -174,7 +178,7 @@ void CFloatWnd::OnPaint()
 	GetClientRect(rect);
 
 	//画图标
-	if(!Util::LoadBitmapFile(m_pcfg->iconFileName,dc)){
+	if(!Util::LoadBitmapFile(m_pcfg->iconConfigInfo.iconFileName,dc)){
 		CBrush backBrush;
 		backBrush.CreateSolidBrush(RGB(113,129,137));
 		CBrush* pOldBrush=dc.SelectObject(&backBrush); 
