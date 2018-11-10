@@ -1,6 +1,6 @@
 #include "StdAfx.h"
 #include "Configuration.h"
-#include "IniFile.h"
+#include "profile.h"
 
 Configuration* Configuration::m_pInstance = NULL;
 
@@ -83,11 +83,11 @@ BOOL Configuration::ParseApp()
 	DWORD ret = 0;
 
 	memset(value, 0, MAX_PATH);
-	CeGetPrivateProfileString(_T("app"), _T("window_name"), _T("WND_FLOATTOOL"), value, MAX_PATH,m_IniFileName);
+	GetPrivateProfileStringW2(_T("app"), _T("window_name"), _T("WND_FLOATTOOL"), value, MAX_PATH,m_IniFileName);
 	wcscpy_s(windowName, sizeof(windowName), value);
 
 	memset(value, 0, MAX_PATH);
-	CeGetPrivateProfileString(_T("app"), _T("font_resource"), _T(""), value, wcslen(value),m_IniFileName);
+	GetPrivateProfileStringW2(_T("app"), _T("font_resource"), _T(""), value, wcslen(value),m_IniFileName);
 	wcscpy_s(fontConfigInfo.fontFileName, sizeof(fontConfigInfo.fontFileName), value);
 
 	TRACE(_T("[app] window_name='%s' font_resource='%s'\n"), windowName, fontConfigInfo.fontFileName);
@@ -112,7 +112,7 @@ BOOL Configuration::ParseAutoRun()
 		memset(value, 0, MAX_PATH);
 		swprintf_s(key, sizeof(key), _T("cmd%d"), i);
 
-		CeGetPrivateProfileString(_T("autorun"), key, _T(""), value, MAX_PATH,m_IniFileName);
+		GetPrivateProfileStringW2(_T("autorun"), key, _T(""), value, MAX_PATH,m_IniFileName);
 		if(wcslen(value)==0){
 			break;
 		}else{
@@ -135,7 +135,7 @@ BOOL Configuration::ParseFloatIcon()
 	DWORD ret = 0;
 	//提取悬浮图标背景
 	memset(value, 0, MAX_PATH);
-	CeGetPrivateProfileString(_T("icon"), _T("background"), _T(""), value, wcslen(value),m_IniFileName);
+	GetPrivateProfileStringW2(_T("icon"), _T("background"), _T(""), value, MAX_PATH,m_IniFileName);
 	if(wcslen(value)==0){
 		GetModuleFileName(AfxGetInstanceHandle(), iconConfigInfo.iconFileName, MAX_PATH);
 		TCHAR *pos = wcsrchr (iconConfigInfo.iconFileName,'\\');
@@ -148,8 +148,14 @@ BOOL Configuration::ParseFloatIcon()
 	}
 
 	//提取悬浮图标属性配置
-	iconConfigInfo.iconWidth = CeGetPrivateProfileInt(_T("icon"), _T("width"), 0, m_IniFileName);
-	iconConfigInfo.iconHeight = CeGetPrivateProfileInt(_T("icon"), _T("height"), 0, m_IniFileName);
+	ret = GetPrivateProfileStringW2(_T("icon"), _T("width"), _T("0"), value, MAX_PATH,m_IniFileName);
+	if(wcslen(value)!=0){
+		iconConfigInfo.iconWidth = _wtoi(value);
+	}
+	ret = GetPrivateProfileStringW2(_T("icon"), _T("height"), _T("0"), value, MAX_PATH,m_IniFileName);
+	if(wcslen(value)!=0){
+		iconConfigInfo.iconHeight = _wtoi(value);
+	}
 	if(iconConfigInfo.iconWidth<=0 || iconConfigInfo.iconHeight<=0){
 		iconConfigInfo.iconWidth = iconConfigInfo.iconHeight = 48;
 	}
@@ -160,8 +166,14 @@ BOOL Configuration::ParseFloatIcon()
 		iconConfigInfo.iconHeight = yScreen;
 	}
 
-	iconConfigInfo.iconPosX = CeGetPrivateProfileInt(_T("icon"), _T("x"), 0, m_IniFileName);
-	iconConfigInfo.iconPosY = CeGetPrivateProfileInt(_T("icon"), _T("y"), 0, m_IniFileName);
+	ret = GetPrivateProfileStringW2(_T("icon"), _T("x"), _T("0"), value, MAX_PATH,m_IniFileName);
+	if(wcslen(value)!=0){
+		iconConfigInfo.iconPosX = _wtoi(value);
+	}
+	ret = GetPrivateProfileStringW2(_T("icon"), _T("y"), _T("0"), value, MAX_PATH,m_IniFileName);
+	if(wcslen(value)!=0){
+		iconConfigInfo.iconPosY = _wtoi(value);
+	}
 	if(iconConfigInfo.iconPosX<0 || iconConfigInfo.iconPosY<0){
 		iconConfigInfo.iconPosX = xScreen;iconConfigInfo.iconPosY = yScreen/3;
 	}
@@ -198,26 +210,25 @@ BOOL Configuration::ParseMenu()
 		memset(text, 0, MAX_PATH);
 		swprintf_s(key, sizeof(key), _T("item%d_text"), i);
 
-		CeGetPrivateProfileString(_T("menu"), key, _T(""), text, MAX_PATH,m_IniFileName);
+		ret = GetPrivateProfileStringW2(_T("menu"), key, _T(""), text, MAX_PATH,m_IniFileName);
 		menuItemTextStrArray.Add(text);
 
 		//命令
 		memset(key, 0, MAX_PATH);
 		swprintf_s(key, sizeof(key), _T("item%d_cmd"), i);
 
-		CeGetPrivateProfileString(_T("menu"), key, _T(""), cmd, MAX_PATH,m_IniFileName);
-
+		ret = GetPrivateProfileStringW2(_T("menu"), key, _T(""), cmd, MAX_PATH,m_IniFileName);
 		if(wcslen(cmd)==0){
 			break;
 		}else{
-			TRACE(_T("[menu] item%d [%s] {%s}\n"), i, text, cmd);
+			TRACE(_T("[menu] item%d text=\"%s\" cmd=\"%s\"\n"), i, text, cmd);
 			menuItemCmdStrArray.Add(cmd);
 		}
 	}
 
 	//提取菜单背景
 	memset(value, 0, MAX_PATH);
-	CeGetPrivateProfileString(_T("menu"), _T("background"), _T(""), value, wcslen(value),m_IniFileName);
+	ret = GetPrivateProfileStringW2(_T("menu"), _T("background"), _T(""), value, MAX_PATH,m_IniFileName);
 	if(wcslen(value)==0){
 		GetModuleFileName(AfxGetInstanceHandle(), menuBgFileName, MAX_PATH);
 		TCHAR *pos = wcsrchr (menuBgFileName,'\\');
@@ -228,11 +239,12 @@ BOOL Configuration::ParseMenu()
 	}else{
 		wcscpy_s(menuBgFileName, sizeof(menuBgFileName), value);
 	}
-	TRACE(_T("[menu] BgFileName='%s'\n"), menuBgFileName);
+	TRACE(_T("[menu] background='%s'\n"), menuBgFileName);
 
 	//提取菜单选项属性配置
 	memset(value, 0, MAX_PATH);
-	CeGetPrivateProfileString(_T("menu"), _T("layout"), _T("vertical"), value, wcslen(value),m_IniFileName);
+	ret = GetPrivateProfileStringW2(_T("menu"), _T("layout"), _T("vertical"), value, MAX_PATH,m_IniFileName);
+	TRACE(_T("[menu] layout='%s'\n"), value);
 	if(_wcsicmp(value, _T("vertical"))==0){
 		menuLayout = LAYOUT_VERTICAL;
 	}else{
@@ -242,20 +254,23 @@ BOOL Configuration::ParseMenu()
 	//字体配置
 	if(!m_lockFont){
 		memset(value, 0, MAX_PATH);
-		CeGetPrivateProfileString(_T("menu"), _T("font_name"), _T(""), value, wcslen(value),m_IniFileName);
+		ret = GetPrivateProfileStringW2(_T("menu"), _T("font_name"), _T(""), value, MAX_PATH,m_IniFileName);
 		wcscpy_s(fontConfigInfo.lf.lfFaceName, sizeof(fontConfigInfo.lf.lfFaceName), value);
 
-		fontConfigInfo.lf.lfHeight = CeGetPrivateProfileInt(_T("menu"), _T("font_size"), 0, m_IniFileName);
+		ret = GetPrivateProfileStringW2(_T("menu"), _T("font_size"), _T("0"), value, MAX_PATH,m_IniFileName);
+		if(wcslen(value)!=0){
+			fontConfigInfo.lf.lfHeight = _wtoi(value);
+		}
 		if(fontConfigInfo.lf.lfHeight<=0){
 			fontConfigInfo.lf.lfHeight = 0;
 		}
 
 		memset(value, 0, MAX_PATH);
-		CeGetPrivateProfileString(_T("menu"), _T("font_color"), _T("0xFFFFFF"), value, t_strlen(value),m_IniFileName);
+		GetPrivateProfileStringW2(_T("menu"), _T("font_color"), _T("0xFFFFFF"), value, MAX_PATH,m_IniFileName);
 		fontConfigInfo.fontColor = _wtoi(value);
 
 		memset(value, 0, MAX_PATH);
-		CeGetPrivateProfileString(_T("menu"), _T("font_format"), _T("center"), value, t_strlen(value),m_IniFileName);
+		GetPrivateProfileStringW2(_T("menu"), _T("font_format"), _T("center"), value, MAX_PATH,m_IniFileName);
 		if(_wcsicmp(value, _T("center"))==0){
 			fontConfigInfo.fontFormat = DT_CENTER|DT_VCENTER;
 		}else if(_wcsicmp(value, _T("left"))==0){
@@ -267,19 +282,26 @@ BOOL Configuration::ParseMenu()
 		TRACE(_T("[menu] font file='%s' faceName='%s' charSet=%d width=%d color=%#x\n"), fontConfigInfo.fontFileName, fontConfigInfo.lf.lfFaceName, fontConfigInfo.lf.lfCharSet, fontConfigInfo.lf.lfHeight, fontConfigInfo.fontColor);
 	}
 
-	menuItemWidth = CeGetPrivateProfileInt(_T("menu"), _T("item_width"), 0, m_IniFileName);
-	menuItemHeight = CeGetPrivateProfileInt(_T("menu"), _T("item_height"), 0, m_IniFileName);
+	ret = GetPrivateProfileStringW2(_T("menu"), _T("item_width"), _T("0"), value, MAX_PATH,m_IniFileName);
+	if(wcslen(value)!=0){
+		menuItemWidth = _wtoi(value);
+	}
+	ret = GetPrivateProfileStringW2(_T("menu"), _T("item_height"), _T("0"), value, MAX_PATH,m_IniFileName);
+	if(wcslen(value)!=0){
+		menuItemHeight = _wtoi(value);
+	}
+	
 	if(menuItemWidth<=0 || menuItemHeight<=0){
 		menuItemWidth = xScreen/3;
 		menuItemHeight = yScreen/10;
 	}
 
 	memset(value, 0, MAX_PATH);
-	CeGetPrivateProfileString(_T("menu"), _T("item_color_normal"), _T("0xAAAAAA"), value, t_strlen(value),m_IniFileName);
+	GetPrivateProfileStringW2(_T("menu"), _T("item_color_normal"), _T("0xAAAAAA"), value, MAX_PATH,m_IniFileName);
 	menuItemColorNormal = _wtoi(value);
 
 	memset(value, 0, MAX_PATH);
-	CeGetPrivateProfileString(_T("menu"), _T("item_color_selected"), _T("0xAAAAAA"), value, t_strlen(value),m_IniFileName);
+	GetPrivateProfileStringW2(_T("menu"), _T("item_color_selected"), _T("0xAAAAAA"), value, MAX_PATH,m_IniFileName);
 	menuItemColorSelected = _wtoi(value);
 
 	if(menuItemColorNormal<0 || menuItemColorNormal>0xFFFFFF){
